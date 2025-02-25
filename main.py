@@ -3,10 +3,10 @@ import time
 import telebot
 import gspread
 import datetime
-import requests
 from oauth2client.service_account import ServiceAccountCredentials
 import smtplib
 from email.mime.text import MIMEText
+import requests
 
 # Telegram Bot Token
 TOKEN = os.getenv("TOKEN")
@@ -27,22 +27,14 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 
+# Автоматичне вимкнення Webhook перед polling
+bot.remove_webhook()
+time.sleep(1)
+
+# Словник для тимчасового збереження даних
 user_data = {}
 
-# ✅ Видаляємо Webhook перед запуском polling
-def remove_webhook():
-    requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook")
-    print("✅ Webhook вимкнено!")
-
-# ✅ Отримуємо наступний номер звернення
-def get_next_ticket_number():
-    records = sheet.get_all_records()
-    if records:
-        last_number = int(records[-1]["№"])  # Останній номер
-        return last_number + 1
-    return 1  # Якщо таблиця порожня
-
-# ✅ Функція для надсилання email
+# Функція для надсилання email
 def send_email(subject, body, recipient):
     msg = MIMEText(body)
     msg["Subject"] = subject
@@ -57,7 +49,15 @@ def send_email(subject, body, recipient):
     except Exception as e:
         print(f"❌ Помилка надсилання email: {e}")
 
-# ✅ Початок взаємодії
+# Функція отримання наступного номера звернення
+def get_next_ticket_number():
+    records = sheet.get_all_records()
+    if records:
+        last_number = int(records[-1]["№"])
+        return last_number + 1
+    return 1
+
+# Обробка команди /start
 @bot.message_handler(commands=["start"])
 def start_conversation(message):
     chat_id = message.chat.id
@@ -141,9 +141,8 @@ def get_photo(message):
 
 def save_data(message):
     chat_id = message.chat.id
-
-    # Обробка фото
     photo_url = ""
+
     if message.photo:
         file_info = bot.get_file(message.photo[-1].file_id)
         photo_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
@@ -174,13 +173,10 @@ def save_data(message):
 
     del user_data[chat_id]
 
-# ✅ Запуск polling без помилок Render
-if __name__ == "__main__":
-    remove_webhook()  # Гарантовано вимикаємо Webhook
-
-    while True:
-        try:
-            bot.polling(none_stop=True, timeout=60)
-        except Exception as e:
-            print(f"Помилка: {e}")
-            time.sleep(5)
+# Запуск polling із захистом
+while True:
+    try:
+        bot.polling(none_stop=True, timeout=60)
+    except Exception as e:
+        print(f"Помилка: {e}")
+        time.sleep(5)
