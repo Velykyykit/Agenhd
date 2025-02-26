@@ -93,7 +93,22 @@ def get_description(message):
     bot.send_message(message.chat.id, "Оберіть рівень терміновості:", reply_markup=markup)
 
 def get_photo(message):
-    user_data[message.chat.id]["photo"] = message.text if message.text else "-"
+    if message.photo:
+        file_id = message.photo[-1].file_id  # Отримуємо найбільше фото (найкраща якість)
+        file_info = bot.get_file(file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
+        
+        # Збереження фото локально (опціонально, якщо треба завантажити далі)
+        file_name = f"photo_{message.chat.id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
+        with open(file_name, "wb") as file:
+            file.write(downloaded_file)
+        
+        # Тут можна завантажити на Google Drive або інше сховище та отримати URL
+        photo_link = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
+        user_data[message.chat.id]["photo"] = photo_link
+    else:
+        user_data[message.chat.id]["photo"] = "-"
+
     save_to_google_sheets(message.chat.id)
 
 def save_to_google_sheets(user_id):
