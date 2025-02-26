@@ -31,7 +31,7 @@ def send_welcome(message):
     bot.register_next_step_handler(message, verify_phone)
 
 def verify_phone(message):
-    phone = "'" + message.text.strip()
+    phone = message.text.strip()
     found = None
     
     base_data = sheet_base.get_all_values()
