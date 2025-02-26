@@ -2,31 +2,33 @@ import telebot
 import gspread
 import datetime
 import os
-import time
+from flask import Flask, request
 from oauth2client.service_account import ServiceAccountCredentials
 import smtplib
 from email.mime.text import MIMEText
 
-# Telegram Bot Token
+# Налаштування змінних оточення
 TOKEN = os.getenv("TOKEN")
-bot = telebot.TeleBot(TOKEN)
-
-# Google Sheets Setup
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 SHEET_ID = os.getenv("SHEET_ID")
 CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
-
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILE, scope)
-client = gspread.authorize(creds)
-sheet = client.open_by_key(SHEET_ID).sheet1
-
-# Email Setup
 EMAIL = os.getenv("EMAIL")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 
-# Відповідальні особи за зверненнями
+bot = telebot.TeleBot(TOKEN)
+
+# Web сервер на Flask
+app = Flask(__name__)
+
+# Google Sheets авторизація
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILE, scope)
+client = gspread.authorize(creds)
+sheet = client.open_by_key(SHEET_ID).sheet1
+
+# Відповідальні особи
 RESPONSIBLES = {
     "Маркетинг": {"name": "Іван Іванов", "phone": "+380671234567", "email": "marketing@example.com"},
     "Клієнти": {"name": "Петро Петренко", "phone": "+380632345678", "email": "clients@example.com"},
@@ -118,24 +120,11 @@ def get_date(message):
     chat_id = message.chat.id
     user_data[chat_id]['urgency'] = message.text
     bot.send_message(chat_id, "Вкажіть дату, на коли потрібно вирішити (або натисніть 'Пропустити'):")
-    bot.register_next_step_handler(message, get_photo)
-
-def get_photo(message):
-    chat_id = message.chat.id
-    user_data[chat_id]['date'] = message.text
-
-    bot.send_message(chat_id, "Прикріпіть фото (або натисніть 'Пропустити'):")
     bot.register_next_step_handler(message, save_data)
 
 def save_data(message):
     chat_id = message.chat.id
-    photo_url = ""
-
-    if message.photo:
-        file_info = bot.get_file(message.photo[-1].file_id)
-        photo_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
-
-    user_data[chat_id]['photo'] = photo_url if photo_url else "Немає"
+    user_data[chat_id]['date'] = message.text
 
     responsible = RESPONSIBLES[user_data[chat_id]['category']]
     
@@ -150,24 +139,25 @@ def save_data(message):
         user_data[chat_id]['desc'],
         user_data[chat_id]['urgency'],
         user_data[chat_id]['date'],
-        user_data[chat_id]['photo'],
         responsible["name"],
         responsible["phone"],
         "В обробці"
     ]
 
-    try:
-        sheet.append_row(new_ticket)
-        bot.send_message(chat_id, f"✅ Ваше звернення передано {responsible['name']} ({responsible['phone']})")
-    except Exception as e:
-        bot.send_message(chat_id, f"❌ Помилка запису в таблицю: {e}")
+    sheet.append_row(new_ticket)
+
+    bot.send_message(chat_id, f"✅ Ваше звернення передано {responsible['name']} ({responsible['phone']})")
 
     del user_data[chat_id]
 
-# Запуск polling із захистом
-while True:
-    try:
-        bot.polling(none_stop=True, timeout=60)
-    except Exception as e:
-        print(f"Помилка: {e}")
-        time.sleep(5)
+# Webhook
+@app.route(f"/{TOKEN}", methods=["POST"])
+def webhook():
+    bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
+    return "OK", 200
+
+# Запуск Webhook
+if __name__ == "__main__":
+    bot.remove_webhook()
+    bot.set_webhook(url=f"{WEBHOOK_URL}/{TOKEN}")
+    app.run(host="0.0.0.0", port=5000, debug=True)
