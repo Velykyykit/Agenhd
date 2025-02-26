@@ -1,20 +1,17 @@
-import os
-import time
 import telebot
 import gspread
-import datetime
 from oauth2client.service_account import ServiceAccountCredentials
 import smtplib
 from email.mime.text import MIMEText
-import requests
+import datetime
 
 # Telegram Bot Token
-TOKEN = os.getenv("TOKEN")
+TOKEN = "7868393223:AAGw_x1U3r2MU9gQyfqL2kg4vtM7oy8jiUI"
 bot = telebot.TeleBot(TOKEN)
 
 # Google Sheets Setup
-SHEET_ID = os.getenv("SHEET_ID")
-CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
+SHEET_ID = "1LO5YVAQBO872YpbUb-DbIWgL4W9ybOY6g04Cr-nqJCk"
+CREDENTIALS_FILE = "zvernennya-42124e812469.json"
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILE, scope)
@@ -22,161 +19,63 @@ client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).sheet1
 
 # Email Setup
-EMAIL = os.getenv("EMAIL")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+EMAIL = "your_email@gmail.com"
+EMAIL_PASSWORD = "your_email_password"
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 
-# Автоматичне вимкнення Webhook перед polling
-bot.remove_webhook()
-time.sleep(1)
+# Відповідальні особи за зверненнями
+RESPONSIBLES = {
+    "Маркетинг": {"name": "Іван Іванов", "phone": "+380671234567", "email": "marketing@example.com"},
+    "Клієнти": {"name": "Петро Петренко", "phone": "+380632345678", "email": "clients@example.com"},
+    "Персонал": {"name": "Олена Олененко", "phone": "+380501234567", "email": "hr@example.com"},
+    "Товари": {"name": "Василь Василенко", "phone": "+380931234567", "email": "products@example.com"},
+    "Фінанси": {"name": "Анна Анненко", "phone": "+380671234890", "email": "finance@example.com"},
+    "Ремонт": {"name": "Микола Миколенко", "phone": "+380662345678", "email": "repair@example.com"},
+    "Інше": {"name": "Олександр Олександров", "phone": "+380731234567", "email": "other@example.com"}
+}
 
-# Словник для тимчасового збереження даних
-user_data = {}
-
-# Функція для надсилання email
 def send_email(subject, body, recipient):
     msg = MIMEText(body)
     msg["Subject"] = subject
     msg["From"] = EMAIL
     msg["To"] = recipient
+    
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        server.starttls()
+        server.login(EMAIL, EMAIL_PASSWORD)
+        server.sendmail(EMAIL, recipient, msg.as_string())
 
-    try:
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(EMAIL, EMAIL_PASSWORD)
-            server.sendmail(EMAIL, recipient, msg.as_string())
-    except Exception as e:
-        print(f"❌ Помилка надсилання email: {e}")
-
-# Функція отримання наступного номера звернення
-def get_next_ticket_number():
-    records = sheet.get_all_records()
-    if records:
-        last_number = int(records[-1]["№"])
-        return last_number + 1
-    return 1
-
-# Обробка команди /start
 @bot.message_handler(commands=["start"])
-def start_conversation(message):
-    chat_id = message.chat.id
-    user_data[chat_id] = {}
+def send_welcome(message):
+    bot.reply_to(message, "Вітаю! Надішліть ваше звернення у форматі:")
+    bot.send_message(message.chat.id, "Ім'я Прізвище\nТелефон\nНавчальний центр\nВид звернення\nКороткий опис\nОпис\nТерміновість\nДата подання")
 
-    bot.send_message(chat_id, "Вітаю! Введіть ваш Email:")
-    bot.register_next_step_handler(message, get_name)
-
-def get_name(message):
-    chat_id = message.chat.id
-    user_data[chat_id]['email'] = message.text
-    bot.send_message(chat_id, "Введіть ваше Ім'я:")
-    bot.register_next_step_handler(message, get_surname)
-
-def get_surname(message):
-    chat_id = message.chat.id
-    user_data[chat_id]['name'] = message.text
-    bot.send_message(chat_id, "Введіть ваше Прізвище:")
-    bot.register_next_step_handler(message, get_phone)
-
-def get_phone(message):
-    chat_id = message.chat.id
-    user_data[chat_id]['surname'] = message.text
-    bot.send_message(chat_id, "Введіть ваш телефон (Viber):")
-    bot.register_next_step_handler(message, get_center)
-
-def get_center(message):
-    chat_id = message.chat.id
-    user_data[chat_id]['phone'] = message.text
-
-    keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add("Південний", "Сихів")
-    bot.send_message(chat_id, "Виберіть ваш навчальний центр:", reply_markup=keyboard)
-    bot.register_next_step_handler(message, get_category)
-
-def get_category(message):
-    chat_id = message.chat.id
-    user_data[chat_id]['center'] = message.text
-
-    keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-    categories = ["Маркетинг", "Клієнти", "Персонал", "Товари", "Фінанси", "Ремонт", "Інше"]
-    keyboard.add(*categories)
-    
-    bot.send_message(chat_id, "Оберіть вид звернення:", reply_markup=keyboard)
-    bot.register_next_step_handler(message, get_short_desc)
-
-def get_short_desc(message):
-    chat_id = message.chat.id
-    user_data[chat_id]['category'] = message.text
-    bot.send_message(chat_id, "Введіть короткий опис звернення:")
-    bot.register_next_step_handler(message, get_desc)
-
-def get_desc(message):
-    chat_id = message.chat.id
-    user_data[chat_id]['short_desc'] = message.text
-    bot.send_message(chat_id, "Прошу надати максимально деталей опис запиту:")
-    bot.register_next_step_handler(message, get_urgency)
-
-def get_urgency(message):
-    chat_id = message.chat.id
-    user_data[chat_id]['desc'] = message.text
-
-    keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add("Термінове", "Середнє", "Нетермінове")
-    
-    bot.send_message(chat_id, "Оберіть рівень терміновості:", reply_markup=keyboard)
-    bot.register_next_step_handler(message, get_date)
-
-def get_date(message):
-    chat_id = message.chat.id
-    user_data[chat_id]['urgency'] = message.text
-    bot.send_message(chat_id, "Вкажіть дату, на коли потрібно вирішити (або натисніть 'Пропустити'):")
-    bot.register_next_step_handler(message, get_photo)
-
-def get_photo(message):
-    chat_id = message.chat.id
-    user_data[chat_id]['date'] = message.text
-
-    bot.send_message(chat_id, "Прикріпіть фото (або натисніть 'Пропустити'):")
-    bot.register_next_step_handler(message, save_data)
-
-def save_data(message):
-    chat_id = message.chat.id
-    photo_url = ""
-
-    if message.photo:
-        file_info = bot.get_file(message.photo[-1].file_id)
-        photo_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
-
-    user_data[chat_id]['photo'] = photo_url if photo_url else "Немає"
-
-    new_ticket = [
-        get_next_ticket_number(),
-        datetime.datetime.now().strftime("%H:%M, %d.%m.%Y"),
-        user_data[chat_id]['email'],
-        user_data[chat_id]['name'],
-        user_data[chat_id]['surname'],
-        user_data[chat_id]['phone'],
-        user_data[chat_id]['center'],
-        user_data[chat_id]['category'],
-        user_data[chat_id]['short_desc'],
-        user_data[chat_id]['desc'],
-        user_data[chat_id]['urgency'],
-        user_data[chat_id]['date'],
-        user_data[chat_id]['photo']
-    ]
-
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
     try:
-        sheet.append_row(new_ticket)
-        bot.send_message(chat_id, "✅ Ваше звернення збережено!")
+        data = message.text.split("\n")
+        if len(data) < 8:
+            bot.reply_to(message, "Будь ласка, введіть всі необхідні поля!")
+            return
+        
+        name, phone, center, category, short_desc, desc, urgency, date = data[:8]
+        
+        if category not in RESPONSIBLES:
+            bot.reply_to(message, "Невідома категорія звернення. Виберіть правильну категорію!")
+            return
+        
+        responsible = RESPONSIBLES[category]
+        resp_name, resp_phone, resp_email = responsible["name"], responsible["phone"], responsible["email"]
+        
+        sheet.append_row([datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), message.chat.id, name, phone, center, category, short_desc, desc, urgency, "", resp_name, resp_phone, "В обробці"])
+        
+        email_body = f"Нове звернення від {name}:\n{short_desc}\n{desc}\nТерміновість: {urgency}\nКонтакт: {phone}\nНавчальний центр: {center}"
+        send_email("Нове звернення", email_body, resp_email)
+        send_email("Нове звернення", email_body, "gammmerx@gmail.com")
+        
+        bot.reply_to(message, f"Ваше звернення передано відповідальному: {resp_name} ({resp_phone}). Ви отримаєте оновлення щодо статусу!")
     except Exception as e:
-        bot.send_message(chat_id, f"❌ Помилка запису в таблицю: {e}")
+        bot.reply_to(message, f"Помилка: {e}")
 
-    del user_data[chat_id]
-
-# Запуск polling із захистом
-while True:
-    try:
-        bot.polling(none_stop=True, timeout=60)
-    except Exception as e:
-        print(f"Помилка: {e}")
-        time.sleep(5)
+bot.polling()
