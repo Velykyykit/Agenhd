@@ -106,6 +106,10 @@ def save_to_google_sheets(user_id):
 def handle_callback_query(call):
     user_id = call.message.chat.id
 
+    # Перевіряємо, чи є user_id у user_data, якщо немає - створюємо
+    if user_id not in user_data:
+        user_data[user_id] = {}
+
     if call.data in ["Південний", "Сихів"]:
         user_data[user_id]["center"] = call.data
         markup = InlineKeyboardMarkup()
