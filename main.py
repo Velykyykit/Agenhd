@@ -69,19 +69,7 @@ def get_phone(message):
     markup.add(InlineKeyboardButton("Сихів", callback_data="Сихів"))
     bot.send_message(message.chat.id, "Виберіть навчальний центр:", reply_markup=markup)
 
-def get_category(message):
-    user_data[message.chat.id]["center"] = message.text
-    markup = InlineKeyboardMarkup()
-    for category in RESPONSIBLES.keys():
-        markup.add(InlineKeyboardButton(category, callback_data=category))
-    bot.send_message(message.chat.id, "Оберіть вид звернення:", reply_markup=markup)
-
 def get_short_desc(message):
-    user_data[message.chat.id]["category"] = message.text
-    bot.send_message(message.chat.id, "Введіть короткий опис звернення:")
-    bot.register_next_step_handler(message, get_description)
-
-def get_description(message):
     user_data[message.chat.id]["short_desc"] = message.text
     bot.send_message(message.chat.id, "Опишіть ваше звернення детальніше:")
     bot.register_next_step_handler(message, get_urgency)
@@ -95,9 +83,13 @@ def get_urgency(message):
     bot.send_message(message.chat.id, "Оберіть рівень терміновості:", reply_markup=markup)
 
 def save_to_google_sheets(user_id):
-    data = user_data[user_id]
+    data = user_data.get(user_id, {})
+    if "category" not in data or "center" not in data:
+        bot.send_message(user_id, "Сталася помилка. Будь ласка, спробуйте ще раз.")
+        return None
+    
     responsible = RESPONSIBLES[data["category"]]
-    row = [datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), data["name"], data["phone"], data["center"], data["category"], 
+    row = [datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), data["name"], data["phone"], data["center"], data["category"],
            data["short_desc"], data["description"], data["urgency"], responsible["name"], responsible["phone"], "В обробці"]
     sheet.append_row(row)
     return responsible
@@ -105,14 +97,21 @@ def save_to_google_sheets(user_id):
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback_query(call):
     user_id = call.message.chat.id
-    if call.data in RESPONSIBLES.keys():
+    if call.data in ["Південний", "Сихів"]:
+        user_data[user_id]["center"] = call.data
+        markup = InlineKeyboardMarkup()
+        for category in RESPONSIBLES.keys():
+            markup.add(InlineKeyboardButton(category, callback_data=category))
+        bot.send_message(user_id, "Оберіть вид звернення:", reply_markup=markup)
+    elif call.data in RESPONSIBLES.keys():
         user_data[user_id]["category"] = call.data
         bot.send_message(user_id, "Введіть короткий опис звернення:")
         bot.register_next_step_handler(call.message, get_short_desc)
     elif call.data in ["Термінове", "Середнє", "Нетермінове"]:
         user_data[user_id]["urgency"] = call.data
         responsible = save_to_google_sheets(user_id)
-        bot.send_message(user_id, f"Ваше звернення передано {responsible['name']} ({responsible['phone']})")
-        send_email("Нове звернення", f"Звернення: {user_data[user_id]}", "gammmerx@gmail.com")
+        if responsible:
+            bot.send_message(user_id, f"✅ Ваше звернення передано {responsible['name']} ({responsible['phone']})")
+            send_email("Нове звернення", f"Звернення: {user_data[user_id]}", "gammmerx@gmail.com")
 
 bot.polling()
