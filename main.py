@@ -31,30 +31,31 @@ def send_welcome(message):
     bot.register_next_step_handler(message, verify_phone)
 
 def verify_phone(message):
-    phone = "'" + message.text.strip()  # Додаємо ' перед номером
+    phone = message.text.strip()
     found = None
     
-    base_data = sheet_base.get_all_records()
-    for row in base_data:
-        if row['телефон'] == phone:
-            found = row
-            break
+    base_data = sheet_base.get_all_values()
+    phones_column = [row[1].strip().lstrip("'") for row in base_data[1:]]
     
-    if not found:
+    if phone in phones_column:
+        row_index = phones_column.index(phone) + 1  # Отримуємо індекс +1 (бо перший рядок заголовок)
+        found_data = sheet_base.row_values(row_index + 1)  # Отримуємо весь рядок
+        
+        user_data[message.chat.id] = {
+            "name": found_data[2],  # name у колонці C
+            "phone": phone,
+            "email": found_data[3],  # email у колонці D
+            "responsibility": found_data[5]  # відповідальність у колонці F
+        }
+        
+        bot.send_message(message.chat.id, f"Вітаю, {found_data[2]}! Оберіть вид звернення:")
+        markup = InlineKeyboardMarkup()
+        categories = ["Маркетинг", "Клієнти", "Персонал", "Товари", "Фінанси", "Ремонт", "Інше"]
+        for category in categories:
+            markup.add(InlineKeyboardButton(category, callback_data=category))
+        bot.send_message(message.chat.id, "Оберіть вид звернення:", reply_markup=markup)
+    else:
         bot.send_message(message.chat.id, "Вибачте, телефон не знайдено, зверніться до адміністратора")
-        return
-    
-    user_data[message.chat.id]["name"] = found["name"]
-    user_data[message.chat.id]["phone"] = message.text.strip()
-    user_data[message.chat.id]["email"] = found["email"]
-    user_data[message.chat.id]["responsibility"] = found["відповідальність"]
-    
-    bot.send_message(message.chat.id, f"Вітаю, {found['name']}! Оберіть вид звернення:")
-    markup = InlineKeyboardMarkup()
-    categories = ["Маркетинг", "Клієнти", "Персонал", "Товари", "Фінанси", "Ремонт", "Інше"]
-    for category in categories:
-        markup.add(InlineKeyboardButton(category, callback_data=category))
-    bot.send_message(message.chat.id, "Оберіть вид звернення:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback_query(call):
