@@ -4,15 +4,16 @@ from oauth2client.service_account import ServiceAccountCredentials
 import smtplib
 from email.mime.text import MIMEText
 import datetime
+import os
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 # Telegram Bot Token
-TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
+TOKEN = os.getenv("TOKEN")  # Використовуємо змінну середовища
 bot = telebot.TeleBot(TOKEN)
 
 # Google Sheets Setup
-SHEET_ID = "YOUR_GOOGLE_SHEET_ID"
-CREDENTIALS_FILE = "your_google_credentials.json"
+SHEET_ID = os.getenv("SHEET_ID")
+CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
 
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILE, scope)
@@ -20,8 +21,8 @@ client = gspread.authorize(creds)
 sheet = client.open_by_key(SHEET_ID).sheet1
 
 # Email Setup
-EMAIL = "your_email@gmail.com"
-EMAIL_PASSWORD = "your_email_password"
+EMAIL = os.getenv("EMAIL")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 
