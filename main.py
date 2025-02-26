@@ -72,9 +72,9 @@ def get_phone(message):
 def get_short_desc(message):
     user_data[message.chat.id]["short_desc"] = message.text
     bot.send_message(message.chat.id, "Опишіть ваше звернення детальніше:")
-    bot.register_next_step_handler(message, get_urgency)
+    bot.register_next_step_handler(message, get_description)
 
-def get_urgency(message):
+def get_description(message):
     user_data[message.chat.id]["description"] = message.text
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("Термінове", callback_data="Термінове"))
@@ -91,12 +91,19 @@ def save_to_google_sheets(user_id):
     responsible = RESPONSIBLES[data["category"]]
     row = [datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), data["name"], data["phone"], data["center"], data["category"],
            data["short_desc"], data["description"], data["urgency"], responsible["name"], responsible["phone"], "В обробці"]
-    sheet.append_row(row)
-    return responsible
+    try:
+        sheet.append_row(row)
+        return responsible
+    except Exception as e:
+        bot.send_message(user_id, f"Помилка збереження в таблицю: {e}")
+        return None
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback_query(call):
     user_id = call.message.chat.id
+    if user_id not in user_data:
+        user_data[user_id] = {}
+    
     if call.data in ["Південний", "Сихів"]:
         user_data[user_id]["center"] = call.data
         markup = InlineKeyboardMarkup()
