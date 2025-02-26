@@ -135,20 +135,3 @@ def save_to_google_sheets(user_id):
     bot.send_message(user_id, "✅ Ваше звернення прийнято та передано відповідальній особі!")
 
 bot.polling()
-
-import os
-import time
-from flask import Flask
-
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "Bot is running!"
-
-if __name__ == "__main__":
-    PORT = int(os.environ.get("PORT", 8080))  # Використовуємо будь-який порт
-    bot.polling(none_stop=True)  # Запускаємо бота
-    app.run(host="0.0.0.0", port=PORT, debug=False, use_reloader=False)  # Імітуємо веб-сервер
-    while True:
-        time.sleep(100)
