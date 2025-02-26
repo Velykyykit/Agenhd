@@ -105,27 +105,14 @@ def save_to_google_sheets(user_id):
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback_query(call):
     user_id = call.message.chat.id
-
-    # Перевіряємо, чи є user_id у user_data, якщо немає - створюємо
-    if user_id not in user_data:
-        user_data[user_id] = {}
-
-    if call.data in ["Південний", "Сихів"]:
-        user_data[user_id]["center"] = call.data
-        markup = InlineKeyboardMarkup()
-        for category in RESPONSIBLES.keys():
-            markup.add(InlineKeyboardButton(category, callback_data=category))
-        bot.send_message(user_id, "Оберіть вид звернення:", reply_markup=markup)
-
-    elif call.data in RESPONSIBLES.keys():
+    if call.data in RESPONSIBLES.keys():
         user_data[user_id]["category"] = call.data
         bot.send_message(user_id, "Введіть короткий опис звернення:")
         bot.register_next_step_handler(call.message, get_short_desc)
-
     elif call.data in ["Термінове", "Середнє", "Нетермінове"]:
         user_data[user_id]["urgency"] = call.data
         responsible = save_to_google_sheets(user_id)
-        bot.send_message(user_id, f"✅ Ваше звернення передано {responsible['name']} ({responsible['phone']})")
+        bot.send_message(user_id, f"Ваше звернення передано {responsible['name']} ({responsible['phone']})")
         send_email("Нове звернення", f"Звернення: {user_data[user_id]}", "gammmerx@gmail.com")
 
 bot.polling()
