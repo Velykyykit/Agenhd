@@ -53,62 +53,118 @@ def get_next_ticket_number():
     records = sheet.get_all_records()
     return int(records[-1]["№"]) + 1 if records else 1
 
+# Покрокове заповнення форми
+user_data = {}
+
 @bot.message_handler(commands=["start"])
-def send_welcome(message):
-    bot.reply_to(message, "Вітаю! Надішліть ваше звернення у форматі:")
-    bot.send_message(message.chat.id, "Ім'я Прізвище\nТелефон\nНавчальний центр\nВид звернення\nКороткий опис\nОпис\nТерміновість\nДата подання")
+def start_conversation(message):
+    chat_id = message.chat.id
+    user_data[chat_id] = {}
 
-@bot.message_handler(content_types=["text", "photo"])
-def handle_message(message):
-    try:
-        chat_id = message.chat.id
+    bot.send_message(chat_id, "Вітаю! Введіть ваше Ім'я та Прізвище:")
+    bot.register_next_step_handler(message, get_phone)
 
-        if message.photo:  # Якщо користувач надіслав фото
-            file_info = bot.get_file(message.photo[-1].file_id)
-            photo_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
-        else:
-            photo_url = "Немає"
+def get_phone(message):
+    chat_id = message.chat.id
+    user_data[chat_id]['name'] = message.text
+    bot.send_message(chat_id, "Введіть ваш номер телефону (Viber):")
+    bot.register_next_step_handler(message, get_center)
 
-        data = message.text.split("\n")
-        if len(data) < 8:
-            bot.reply_to(message, "Будь ласка, введіть всі необхідні поля!")
-            return
+def get_center(message):
+    chat_id = message.chat.id
+    user_data[chat_id]['phone'] = message.text
 
-        name, phone, center, category, short_desc, desc, urgency, date = data[:8]
+    keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add("Південний", "Сихів")
+    bot.send_message(chat_id, "Виберіть навчальний центр:", reply_markup=keyboard)
+    bot.register_next_step_handler(message, get_category)
 
-        if category not in RESPONSIBLES:
-            bot.reply_to(message, "Невідома категорія звернення. Виберіть правильну категорію!")
-            return
+def get_category(message):
+    chat_id = message.chat.id
+    user_data[chat_id]['center'] = message.text
 
-        responsible = RESPONSIBLES[category]
-        resp_name, resp_phone, resp_email = responsible["name"], responsible["phone"], responsible["email"]
+    keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    categories = list(RESPONSIBLES.keys())
+    for category in categories:
+        keyboard.add(category)
 
-        new_ticket = [
-            get_next_ticket_number(),
-            datetime.datetime.now().strftime("%H:%M, %d.%m.%Y"),  # Додаємо поточну дату в українському форматі
-            name,
-            phone,
-            center,
-            category,
-            short_desc,
-            desc,
-            urgency,
-            date,
-            photo_url,  # Додаємо фото
-            resp_name,
-            resp_phone,
-            "В обробці"
-        ]
+    bot.send_message(chat_id, "Оберіть вид звернення:", reply_markup=keyboard)
+    bot.register_next_step_handler(message, get_short_desc)
 
-        sheet.append_row(new_ticket)
+def get_short_desc(message):
+    chat_id = message.chat.id
+    user_data[chat_id]['category'] = message.text
+    bot.send_message(chat_id, "Введіть короткий опис звернення:")
+    bot.register_next_step_handler(message, get_desc)
 
-        email_body = f"Нове звернення:\nІм'я: {name}\nТелефон: {phone}\nНавчальний центр: {center}\nКатегорія: {category}\nОпис: {desc}\nТерміновість: {urgency}\nФото: {photo_url}"
-        send_email("Нове звернення", email_body, resp_email)
-        send_email("Нове звернення", email_body, "gammmerx@gmail.com")
+def get_desc(message):
+    chat_id = message.chat.id
+    user_data[chat_id]['short_desc'] = message.text
+    bot.send_message(chat_id, "Прошу надати максимально деталей опис запиту:")
+    bot.register_next_step_handler(message, get_urgency)
 
-        bot.reply_to(message, f"✅ Ваше звернення передано відповідальному: {resp_name} ({resp_phone}). Ви отримаєте оновлення щодо статусу!")
-    
-    except Exception as e:
-        bot.reply_to(message, f"❌ Помилка: {e}")
+def get_urgency(message):
+    chat_id = message.chat.id
+    user_data[chat_id]['desc'] = message.text
+
+    keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.add("Термінове", "Середнє", "Нетермінове")
+    keyboard.add("Ввести дату вручну")
+
+    bot.send_message(chat_id, "Оберіть рівень терміновості:", reply_markup=keyboard)
+    bot.register_next_step_handler(message, get_date)
+
+def get_date(message):
+    chat_id = message.chat.id
+    if message.text == "Ввести дату вручну":
+        bot.send_message(chat_id, "Вкажіть дату (формат: DD.MM.YYYY):")
+        bot.register_next_step_handler(message, get_manual_date)
+    else:
+        user_data[chat_id]['urgency'] = message.text
+        user_data[chat_id]['date'] = datetime.datetime.now().strftime("%H:%M, %d.%m.%Y")
+        bot.send_message(chat_id, "Прикріпіть фото (або натисніть 'Пропустити'):")
+        bot.register_next_step_handler(message, get_photo)
+
+def get_manual_date(message):
+    chat_id = message.chat.id
+    user_data[chat_id]['date'] = message.text
+    bot.send_message(chat_id, "Прикріпіть фото (або натисніть 'Пропустити'):")
+    bot.register_next_step_handler(message, get_photo)
+
+def get_photo(message):
+    chat_id = message.chat.id
+    photo_url = "Немає"
+    if message.photo:
+        file_info = bot.get_file(message.photo[-1].file_id)
+        photo_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
+
+    user_data[chat_id]['photo'] = photo_url
+    save_data(chat_id)
+
+def save_data(chat_id):
+    responsible = RESPONSIBLES[user_data[chat_id]['category']]
+
+    new_ticket = [
+        get_next_ticket_number(),
+        user_data[chat_id]['date'],
+        user_data[chat_id]['name'],
+        user_data[chat_id]['phone'],
+        user_data[chat_id]['center'],
+        user_data[chat_id]['category'],
+        user_data[chat_id]['short_desc'],
+        user_data[chat_id]['desc'],
+        user_data[chat_id]['urgency'],
+        user_data[chat_id]['date'],
+        user_data[chat_id]['photo'],
+        responsible["name"],
+        responsible["phone"],
+        "В обробці"
+    ]
+
+    sheet.append_row(new_ticket)
+
+    bot.send_message(chat_id, f"✅ Ваше звернення передано {responsible['name']} ({responsible['phone']})")
+
+    del user_data[chat_id]
 
 bot.polling()
