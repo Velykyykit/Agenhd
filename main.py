@@ -135,3 +135,13 @@ def save_to_google_sheets(user_id):
     bot.send_message(user_id, "✅ Ваше звернення прийнято та передано відповідальній особі!")
 
 bot.polling()
+
+import os
+import time
+
+PORT = int(os.environ.get("PORT", 8080))  # Вказуємо фейковий порт 8080
+
+if __name__ == "__main__":
+    bot.polling(none_stop=True)
+    while True:
+        time.sleep(100)  # Щоб процес не завершувався
