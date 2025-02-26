@@ -35,7 +35,7 @@ def verify_phone(message):
     found = None
     
     base_data = sheet_base.get_all_values()
-    phones_column = [row[1].strip() for row in base_data[1:]]
+    phones_column = [row[1].strip().lstrip("'") for row in base_data[1:]]
     
     if phone in phones_column:
         row_index = phones_column.index(phone) + 1  # Отримуємо індекс +1 (бо перший рядок заголовок)
