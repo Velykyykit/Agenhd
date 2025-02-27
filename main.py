@@ -39,32 +39,32 @@ def send_welcome(message):
 def verify_phone(message):
     """Перевіряє отриманий номер телефону у базі та переходить до вибору навчального центру."""
     if message.contact is None:
-        bot.send_message(message.chat.id, "Помилка! Спробуйте ще раз.")
+        bot.send_message(message.chat.id, "❌ Помилка! Спробуйте ще раз.")
         return
 
     phone = message.contact.phone_number.strip()
     if not phone.startswith("+"):
-        phone = f"+{phone}"  
+        phone = f"+{phone}"  # Додаємо "+" якщо користувач передав без нього
 
     base_data = sheet_base.get_all_values()
     phones_column = [row[1].strip().lstrip("'") for row in base_data[1:]]
 
     if phone in phones_column:
-        row_index = phones_column.index(phone) + 1
-        found_data = sheet_base.row_values(row_index + 1)
+        row_index = phones_column.index(phone) + 1  # Отримуємо індекс +1 (бо перший рядок заголовок)
+        found_data = sheet_base.row_values(row_index + 1)  # Отримуємо весь рядок
 
-        user_name = found_data[2]  # Ім'я з бази (колонка C)
-        
+        user_name = found_data[2].strip() if len(found_data) > 2 else "Користувач"  # Переконуємось, що є ім'я
+
         user_data[message.chat.id] = {
             "name": user_name,  
             "phone": phone,
-            "email": found_data[3],  
-            "responsibility": found_data[5]  
+            "email": found_data[3] if len(found_data) > 3 else "",  
+            "responsibility": found_data[5] if len(found_data) > 5 else ""  
         }
 
         bot.send_message(
             message.chat.id,
-            f"✅ Дякую, *{user_name}*! Ви успішно ідентифіковані.",
+            f"✅ Вітаю, *{user_name}*! Ви успішно ідентифіковані. 🎉",
             parse_mode="Markdown"
         )
 
@@ -73,7 +73,7 @@ def verify_phone(message):
     else:
         bot.send_message(
             message.chat.id,
-            "Вибачте, ваш номер телефону не знайдено у базі. Зверніться до адміністратора."
+            "❌ Ваш номер телефону не знайдено у базі. Зверніться до адміністратора."
         )
 
 def choose_centre(user_id):
