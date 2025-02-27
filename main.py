@@ -6,7 +6,7 @@ import os
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
 # Telegram Bot Token
-TOKEN = os.getenv("TOKEN")  # Використовуємо змінну середовища
+TOKEN = os.getenv("TOKEN")  
 bot = telebot.TeleBot(TOKEN)
 
 # Google Sheets Setup
@@ -37,14 +37,14 @@ def send_welcome(message):
 
 @bot.message_handler(content_types=["contact"])
 def verify_phone(message):
-    """Перевіряє отриманий номер телефону у базі."""
+    """Перевіряє отриманий номер телефону у базі та переходить до вибору навчального центру."""
     if message.contact is None:
         bot.send_message(message.chat.id, "Помилка! Спробуйте ще раз.")
         return
 
     phone = message.contact.phone_number.strip()
     if not phone.startswith("+"):
-        phone = f"+{phone}"  # Додаємо "+" якщо користувач передав без нього
+        phone = f"+{phone}"  
 
     base_data = sheet_base.get_all_values()
     phones_column = [row[1].strip().lstrip("'") for row in base_data[1:]]
@@ -54,33 +54,36 @@ def verify_phone(message):
         found_data = sheet_base.row_values(row_index + 1)
 
         user_data[message.chat.id] = {
-            "name": found_data[2],  # name у колонці C
+            "name": found_data[2],  
             "phone": phone,
-            "email": found_data[3],  # email у колонці D
-            "responsibility": found_data[5]  # відповідальність у колонці F
+            "email": found_data[3],  
+            "responsibility": found_data[5]  
         }
 
-        bot.send_message(message.chat.id, f"Вітаю, {found_data[2]}! Оберіть навчальний центр:")
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("Південний", callback_data="Південний"))
-        markup.add(InlineKeyboardButton("Сихів", callback_data="Сихів"))
-        bot.send_message(message.chat.id, "Виберіть навчальний центр:", reply_markup=markup)
+        bot.send_message(message.chat.id, "✅ Дякую! Ви успішно ідентифіковані.")
+        choose_centre(message.chat.id)  # 🚀 Переходимо до вибору навчального центру
+
     else:
         bot.send_message(
             message.chat.id,
             "Вибачте, ваш номер телефону не знайдено у базі. Зверніться до адміністратора."
         )
 
-@bot.callback_query_handler(func=lambda call: True)
+def choose_centre(user_id):
+    """Запитує вибір навчального центру."""
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("Південний", callback_data="Південний"))
+    markup.add(InlineKeyboardButton("Сихів", callback_data="Сихів"))
+    bot.send_message(user_id, "📍 Оберіть навчальний центр:", reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: True)  # 🔹 Додано обробник callback
 def handle_callback_query(call):
     """Обробка вибору користувача."""
     user_id = call.message.chat.id
-    if user_id not in user_data:
-        user_data[user_id] = {}
 
     if call.data in ["Південний", "Сихів"]:
         user_data[user_id]["centre"] = call.data
-        bot.send_message(user_id, "Оберіть вид звернення:")
+        bot.send_message(user_id, "📌 Оберіть вид звернення:")
         markup = InlineKeyboardMarkup()
         categories = ["Маркетинг", "Клієнти", "Персонал", "Товари", "Фінанси", "Ремонт", "Інше"]
         for category in categories:
@@ -89,33 +92,33 @@ def handle_callback_query(call):
 
     elif call.data in ["Маркетинг", "Клієнти", "Персонал", "Товари", "Фінанси", "Ремонт", "Інше"]:
         user_data[user_id]["category"] = call.data
-        bot.send_message(user_id, "Введіть короткий опис звернення:")
+        bot.send_message(user_id, "✍ Введіть короткий опис звернення:")
         bot.register_next_step_handler(call.message, get_short_desc)
 
     elif call.data in ["Термінове", "Середнє", "Нетермінове"]:
         user_data[user_id]["urgency"] = call.data
-        bot.send_message(user_id, "Прикріпіть фото або введіть '-' якщо фото не потрібно")
+        bot.send_message(user_id, "📸 Прикріпіть фото або введіть '-' якщо фото не потрібно")
         bot.register_next_step_handler(call.message, get_photo)
 
 def get_short_desc(message):
     """Отримує короткий опис звернення."""
     user_data[message.chat.id]["short_desc"] = message.text
-    bot.send_message(message.chat.id, "Опишіть ваше звернення детальніше:")
+    bot.send_message(message.chat.id, "📝 Опишіть ваше звернення детальніше:")
     bot.register_next_step_handler(message, get_description)
 
 def get_description(message):
     """Отримує повний опис звернення."""
     user_data[message.chat.id]["description"] = message.text
     markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("Термінове", callback_data="Термінове"))
-    markup.add(InlineKeyboardButton("Середнє", callback_data="Середнє"))
-    markup.add(InlineKeyboardButton("Нетермінове", callback_data="Нетермінове"))
-    bot.send_message(message.chat.id, "Оберіть рівень терміновості:", reply_markup=markup)
+    markup.add(InlineKeyboardButton("🔥 Термінове", callback_data="Термінове"))
+    markup.add(InlineKeyboardButton("⏳ Середнє", callback_data="Середнє"))
+    markup.add(InlineKeyboardButton("🕒 Нетермінове", callback_data="Нетермінове"))
+    bot.send_message(message.chat.id, "⏳ Оберіть рівень терміновості:", reply_markup=markup)
 
 def get_photo(message):
     """Обробка фото або його відсутності."""
     if message.photo:
-        file_id = message.photo[-1].file_id  # Отримуємо найбільше фото
+        file_id = message.photo[-1].file_id  
         file_info = bot.get_file(file_id)
         photo_link = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
         user_data[message.chat.id]["photo"] = photo_link
