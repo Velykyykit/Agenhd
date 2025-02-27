@@ -53,14 +53,21 @@ def verify_phone(message):
         row_index = phones_column.index(phone) + 1
         found_data = sheet_base.row_values(row_index + 1)
 
+        user_name = found_data[2]  # Ім'я з бази (колонка C)
+        
         user_data[message.chat.id] = {
-            "name": found_data[2],  
+            "name": user_name,  
             "phone": phone,
             "email": found_data[3],  
             "responsibility": found_data[5]  
         }
 
-        bot.send_message(message.chat.id, "✅ Дякую! Ви успішно ідентифіковані.")
+        bot.send_message(
+            message.chat.id,
+            f"✅ Дякую, *{user_name}*! Ви успішно ідентифіковані.",
+            parse_mode="Markdown"
+        )
+
         choose_centre(message.chat.id)  # 🚀 Переходимо до вибору навчального центру
 
     else:
