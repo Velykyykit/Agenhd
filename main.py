@@ -75,6 +75,9 @@ def verify_phone(message):
             parse_mode="Markdown"
         )
 
+        # 🔹 Логування (щоб бачити, чи бот дійшов до цього місця)
+        print(f"[DEBUG] Користувач {user_name} ідентифікований. Відправляємо кнопку '📩 Подати звернення'")
+
         # 🔹 Після привітання надсилаємо кнопку "📩 Подати звернення"
         send_submit_request_button(message.chat.id)
 
@@ -87,13 +90,18 @@ def verify_phone(message):
 
 def send_submit_request_button(user_id):
     """Надсилає кнопку '📩 Подати звернення'."""
-    markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("📩 Подати звернення", callback_data="submit_request"))
-    bot.send_message(user_id, "Натисніть кнопку, щоб подати звернення:", reply_markup=markup)
+    try:
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton("📩 Подати звернення", callback_data="submit_request"))
+        bot.send_message(user_id, "🔹 Натисніть кнопку, щоб подати звернення:", reply_markup=markup)
+        print(f"[DEBUG] Кнопка '📩 Подати звернення' надіслана користувачу {user_id}")
+    except Exception as e:
+        print(f"[ERROR] Помилка при надсиланні кнопки: {e}")
 
 @bot.callback_query_handler(func=lambda call: call.data == "submit_request")
 def handle_submit_request(call):
     """Коли натиснута кнопка '📩 Подати звернення', бот пропонує вибрати навчальний центр."""
+    print(f"[DEBUG] Користувач {call.message.chat.id} натиснув '📩 Подати звернення'")
     choose_centre(call.message.chat.id)
 
 def choose_centre(user_id):
