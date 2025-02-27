@@ -1,3 +1,9 @@
+import os
+
+print("TOKEN:", os.getenv("TOKEN"))
+print("SHEET_ID:", os.getenv("SHEET_ID"))
+print("CREDENTIALS_FILE:", os.getenv("CREDENTIALS_FILE"))
+
 import telebot
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
