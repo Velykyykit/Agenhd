@@ -32,16 +32,25 @@ def clean_phone_number(phone):
 
 @bot.message_handler(commands=["start"])
 def send_welcome(message):
-    """Відправляє кнопку для автоматичного отримання номера телефону."""
+    """Відправляє кнопку для автоматичного отримання номера телефону та кнопку для перезапуску."""
     markup = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
     phone_button = KeyboardButton("📲 Поділитися номером", request_contact=True)
-    markup.add(phone_button)
+    restart_button = KeyboardButton("🔄 Почати спочатку")  # Додаємо кнопку для рестарту
+    markup.add(phone_button, restart_button)
     
     bot.send_message(
         message.chat.id,
-        "Будь ласка, поділіться своїм номером телефону для авторизації:",
+        "Будь ласка, поділіться своїм номером телефону для авторизації або натисніть '🔄 Почати спочатку':",
         reply_markup=markup
     )
+
+@bot.message_handler(func=lambda message: message.text == "🔄 Почати спочатку")
+def restart_process(message):
+    """Скидає всі дані користувача і перезапускає процес."""
+    if message.chat.id in user_data:
+        del user_data[message.chat.id]  # Очищаємо дані користувача
+    send_welcome(message)  # Викликаємо функцію старту
+
 
 @bot.message_handler(content_types=["contact"])
 def verify_phone(message):
