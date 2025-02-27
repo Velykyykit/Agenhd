@@ -1,3 +1,4 @@
+import re
 import telebot
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -22,6 +23,13 @@ sheet_base = client.open_by_key(SHEET_ID).worksheet("base")
 # Словник для тимчасового зберігання введених даних користувача
 user_data = {}
 
+def clean_phone_number(phone):
+    """Видаляє всі пробіли, дужки, тире та інші зайві символи з номера телефону."""
+    phone = re.sub(r"[^\d+]", "", phone)  # Видаляємо все, крім цифр та знака "+"
+    if not phone.startswith("+"):
+        phone = f"+{phone}"  # Додаємо "+" на початок, якщо його немає
+    return phone
+
 @bot.message_handler(commands=["start"])
 def send_welcome(message):
     """Відправляє кнопку для автоматичного отримання номера телефону."""
@@ -42,18 +50,16 @@ def verify_phone(message):
         bot.send_message(message.chat.id, "❌ Помилка! Спробуйте ще раз.")
         return
 
-    phone = message.contact.phone_number.strip()
-    if not phone.startswith("+"):
-        phone = f"+{phone}"  # Додаємо "+" якщо користувач передав без нього
+    phone = clean_phone_number(message.contact.phone_number)  # Очищуємо номер
 
     base_data = sheet_base.get_all_values()
-    phones_column = [row[1].strip().lstrip("'") for row in base_data[1:]]
+    phones_column = [clean_phone_number(row[1].strip().lstrip("'")) for row in base_data[1:]]
 
     if phone in phones_column:
         row_index = phones_column.index(phone) + 1  # Отримуємо індекс +1 (бо перший рядок заголовок)
         found_data = sheet_base.row_values(row_index + 1)  # Отримуємо весь рядок
 
-        user_name = found_data[2].strip() if len(found_data) > 2 else "Користувач"  # Переконуємось, що є ім'я
+        user_name = found_data[2].strip() if len(found_data) > 2 else "Користувач"
 
         user_data[message.chat.id] = {
             "name": user_name,  
@@ -68,7 +74,7 @@ def verify_phone(message):
             parse_mode="Markdown"
         )
 
-        choose_centre(message.chat.id)  # 🚀 Переходимо до вибору навчального центру
+        choose_centre(message.chat.id)  
 
     else:
         bot.send_message(
@@ -83,7 +89,7 @@ def choose_centre(user_id):
     markup.add(InlineKeyboardButton("Сихів", callback_data="Сихів"))
     bot.send_message(user_id, "📍 Оберіть навчальний центр:", reply_markup=markup)
 
-@bot.callback_query_handler(func=lambda call: True)  # 🔹 Додано обробник callback
+@bot.callback_query_handler(func=lambda call: True)
 def handle_callback_query(call):
     """Обробка вибору користувача."""
     user_id = call.message.chat.id
