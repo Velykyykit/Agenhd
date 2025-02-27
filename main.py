@@ -45,7 +45,7 @@ def send_welcome(message):
 
 @bot.message_handler(content_types=["contact"])
 def verify_phone(message):
-    """Перевіряє отриманий номер телефону у базі та переходить до вибору навчального центру."""
+    """Перевіряє отриманий номер телефону у базі та пропонує подати звернення."""
     if message.contact is None:
         bot.send_message(message.chat.id, "❌ Помилка! Спробуйте ще раз.")
         return
@@ -56,8 +56,8 @@ def verify_phone(message):
     phones_column = [clean_phone_number(row[1].strip().lstrip("'")) for row in base_data[1:]]
 
     if phone in phones_column:
-        row_index = phones_column.index(phone) + 1  # Отримуємо індекс +1 (бо перший рядок заголовок)
-        found_data = sheet_base.row_values(row_index + 1)  # Отримуємо весь рядок
+        row_index = phones_column.index(phone) + 1  
+        found_data = sheet_base.row_values(row_index + 1)  
 
         user_name = found_data[2].strip() if len(found_data) > 2 else "Користувач"
 
@@ -68,25 +68,39 @@ def verify_phone(message):
             "responsibility": found_data[5] if len(found_data) > 5 else ""  
         }
 
+        # 🔹 Вітаємо користувача
         bot.send_message(
             message.chat.id,
             f"✅ Вітаю, *{user_name}*! Ви успішно ідентифіковані. 🎉",
             parse_mode="Markdown"
         )
 
-        choose_centre(message.chat.id)  
+        # 🔹 Після привітання надсилаємо кнопку "📩 Подати звернення"
+        send_submit_request_button(message.chat.id)
 
     else:
+        # ❌ Якщо номер не знайдено, бот повідомляє про це
         bot.send_message(
             message.chat.id,
             "❌ Ваш номер телефону не знайдено у базі. Зверніться до адміністратора."
         )
 
+def send_submit_request_button(user_id):
+    """Надсилає кнопку '📩 Подати звернення'."""
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("📩 Подати звернення", callback_data="submit_request"))
+    bot.send_message(user_id, "Натисніть кнопку, щоб подати звернення:", reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data == "submit_request")
+def handle_submit_request(call):
+    """Коли натиснута кнопка '📩 Подати звернення', бот пропонує вибрати навчальний центр."""
+    choose_centre(call.message.chat.id)
+
 def choose_centre(user_id):
     """Запитує вибір навчального центру."""
     markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("Південний", callback_data="Південний"))
-    markup.add(InlineKeyboardButton("Сихів", callback_data="Сихів"))
+    markup.add(InlineKeyboardButton("🏫 Південний", callback_data="Південний"))
+    markup.add(InlineKeyboardButton("🏫 Сихів", callback_data="Сихів"))
     bot.send_message(user_id, "📍 Оберіть навчальний центр:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: True)
