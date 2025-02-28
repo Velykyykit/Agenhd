@@ -44,14 +44,21 @@ class AuthManager:
         Повертає лише ім'я користувача, якщо знайдено.
         """
         phone_number = self.clean_phone_number(phone_number)
-        phone_numbers = [self.clean_phone_number(num) for num in self.sheet.col_values(2)]  # Отримуємо всі значення з другого стовпця
+
+        # Отримуємо всі номери та видаляємо зайві символи
+        phone_numbers = [
+            self.clean_phone_number(row[1].strip().lstrip("'")) 
+            for row in self.sheet.get_all_values() if len(row) > 1
+        ]
+
+        print(f"[DEBUG] Номери в базі: {phone_numbers}")
 
         if phone_number in phone_numbers:
             row_index = phone_numbers.index(phone_number) + 1
-            found_data = self.sheet.row_values(row_index)  # Отримуємо весь рядок
+            found_data = self.sheet.row_values(row_index + 1)  # Отримуємо весь рядок
 
             # Отримуємо ім'я користувача з 3-го стовпця (змінюй індекс за потреби)
-            user_name = found_data[2] if len(found_data) > 2 else "Невідомий користувач"
+            user_name = found_data[2].strip() if len(found_data) > 2 else "Невідомий користувач"
 
             return user_name  # Повертаємо лише ім'я
 
