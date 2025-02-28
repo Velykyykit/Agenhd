@@ -8,7 +8,7 @@ TOKEN = os.getenv("TOKEN")
 SHEET_ID = os.getenv("SHEET_ID")  
 CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")  # Має бути просто ім'я файлу
 
-# Перевірка наявності змінних
+# Перевірка змінних середовища
 if not TOKEN:
     raise ValueError("❌ TOKEN не знайдено! Перевірте змінні Railway.")
 if not SHEET_ID:
@@ -16,7 +16,10 @@ if not SHEET_ID:
 if not CREDENTIALS_FILE:
     raise ValueError("❌ CREDENTIALS_FILE не знайдено! Перевірте змінні Railway.")
 
-# Ініціалізація AuthManager для підключення до Google Sheets
+# Ініціалізація бота
+bot = telebot.TeleBot(TOKEN)
+
+# Перевіряємо доступ до Google Sheets перед ініціалізацією `auth.py`
 try:
     auth_manager = AuthManager(SHEET_ID, CREDENTIALS_FILE)
     print("✅ Успішно підключено до Google Sheets!")
@@ -24,14 +27,11 @@ except Exception as e:
     print(f"❌ ПОМИЛКА: Не вдалося підключитися до Google Sheets: {e}")
     exit(1)  # Завершуємо програму, якщо не вдалося підключитися
 
-# Ініціалізація бота
-bot = telebot.TeleBot(TOKEN)
-
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     """Запит на надання номера телефону для аутентифікації після команди /start."""
-    markup = get_phone_keyboard()  
-
+    markup = get_phone_keyboard()
+    
     bot.send_message(
         message.chat.id,
         "Поділіться номером для аутентифікації:",  
