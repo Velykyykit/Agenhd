@@ -1,9 +1,17 @@
 import os
 import telebot
 from menu.keyboards import get_phone_keyboard  
-from config.auth import check_user_in_database  # Функція для перевірки номера
+from config.auth import AuthManager  # Імпортуємо клас аутентифікації
 
+# Отримуємо змінні з Railway
 TOKEN = os.getenv("TOKEN")  
+SHEET_ID = os.getenv("SHEET_ID")  
+CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")  
+
+# Передаємо ці змінні в AuthManager (який керує підключенням до Google Sheets)
+auth_manager = AuthManager(SHEET_ID, CREDENTIALS_FILE)
+
+# Ініціалізація бота
 bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start'])
@@ -23,8 +31,8 @@ def handle_contact(message):
     if message.contact:
         phone_number = message.contact.phone_number
 
-        # Перевірка номера в базі даних
-        user_name = check_user_in_database(phone_number)
+        # Використовуємо AuthManager для перевірки номера
+        user_name = auth_manager.check_user_in_database(phone_number)
 
         if user_name:
             bot.send_message(
