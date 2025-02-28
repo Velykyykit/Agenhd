@@ -12,12 +12,15 @@ class AuthManager:
         if not self.credentials_file:
             raise ValueError("❌ CREDENTIALS_FILE не знайдено! Перевірте змінні Railway.")
 
-        # Визначаємо шлях до файлу у кореневій папці
-        BASE_DIR = os.path.dirname(os.path.abspath(__file__))  
-        CREDENTIALS_PATH = os.path.join(BASE_DIR, self.credentials_file)
+        # Використовуємо абсолютний шлях, щоб знайти файл у кореневій папці
+        CREDENTIALS_PATH = os.path.join("/app", self.credentials_file)
 
         # Виводимо шлях до файлу в логах (щоб перевірити)
         print(f"DEBUG: Використовується CREDENTIALS_FILE: {CREDENTIALS_PATH}")
+
+        # Перевіряємо, чи існує файл
+        if not os.path.exists(CREDENTIALS_PATH):
+            raise FileNotFoundError(f"❌ Файл облікових даних не знайдено: {CREDENTIALS_PATH}")
 
         # Авторизація в Google Sheets
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
