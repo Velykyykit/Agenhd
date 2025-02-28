@@ -6,7 +6,7 @@ from config.auth import AuthManager  # Імпортуємо клас аутен�
 # Отримуємо змінні з Railway
 TOKEN = os.getenv("TOKEN")  
 SHEET_ID = os.getenv("SHEET_ID")  
-CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")  
+CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")  # Має бути просто ім'я файлу
 
 # Передаємо ці змінні в AuthManager (який керує підключенням до Google Sheets)
 auth_manager = AuthManager(SHEET_ID, CREDENTIALS_FILE)
