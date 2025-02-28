@@ -1,8 +1,7 @@
-### main.py (Головний файл запуску бота)
 import telebot
-from bot.config import TOKEN
-from bot.handlers import register_handlers
-from bot.logging_service import setup_logging
+from config.settings import TOKEN  # Виправлено шлях імпорту
+from config.handlers import register_handlers  # Виправлено шлях імпорту
+from config.logging_service import setup_logging  # Виправлено шлях імпорту
 
 # Крок 1: Налаштування логування
 setup_logging()
