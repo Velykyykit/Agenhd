@@ -2,44 +2,40 @@ import os
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-class AuthManager:
-    def __init__(self, sheet_id, credentials_file):
-        self.sheet_id = sheet_id
-        self.credentials_file = credentials_file
+# Отримуємо змінні з Railway
+SHEET_ID = os.getenv("SHEET_ID")  
+CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")  
 
-        if not self.sheet_id:
-            raise ValueError("❌ SHEET_ID не знайдено! Перевірте змінні Railway.")
-        if not self.credentials_file:
-            raise ValueError("❌ CREDENTIALS_FILE не знайдено! Перевірте змінні Railway.")
+# Перевірка змінних
+if not SHEET_ID:
+    raise ValueError("❌ Помилка: SHEET_ID не знайдено! Перевірте налаштування Railway.")
+if not CREDENTIALS_FILE:
+    raise ValueError("❌ Помилка: CREDENTIALS_FILE не знайдено! Перевірте налаштування Railway.")
 
-        # Використовуємо абсолютний шлях до файлу
-        CREDENTIALS_PATH = f"/app/{self.credentials_file}"
-        print(f"DEBUG: Використовується CREDENTIALS_FILE: {CREDENTIALS_PATH}")
+# Авторизація в Google Sheets
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILE, scope)
+client = gspread.authorize(creds)
 
-        # Перевіряємо існування файлу
-        if not os.path.exists(CREDENTIALS_PATH):
-            raise FileNotFoundError(f"❌ Файл не знайдено: {CREDENTIALS_PATH}")
+# Відкриваємо аркуш "contact"
+sheet = client.open_by_key(SHEET_ID).worksheet("contact")
 
-        # Підключення до Google Sheets
-        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        self.creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_PATH, scope)
-        self.client = gspread.authorize(self.creds)
-        self.sheet = self.client.open_by_key(self.sheet_id).worksheet("contact")
+def check_user_in_database(phone_number):
+    """
+    Перевіряє, чи є номер телефону у базі Google Sheets.
+    Повертає лише ім'я користувача, якщо знайдено.
+    """
+    # Отримуємо всі значення з другого стовпця (номери телефонів)
+    phone_numbers = sheet.col_values(2)  
 
-        print("✅ Успішно підключено до Google Sheets!")
+    # Пошук номера телефону у списку
+    if phone_number in phone_numbers:
+        row_index = phone_numbers.index(phone_number) + 1
+        found_data = sheet.row_values(row_index)  # Отримуємо весь рядок
 
-    def check_user_in_database(self, phone_number):
-        """
-        Перевіряє, чи є номер телефону у базі Google Sheets.
-        Повертає ім'я користувача, якщо знайдено.
-        """
-        try:
-            phone_numbers = self.sheet.col_values(2)
-            if phone_number in phone_numbers:
-                row_index = phone_numbers.index(phone_number) + 1
-                found_data = self.sheet.row_values(row_index)
-                user_name = found_data[2] if len(found_data) > 2 else "Невідомий користувач"
-                return user_name
-        except Exception as e:
-            print(f"❌ ПОМИЛКА при доступі до Google Sheets: {e}")
-        return None
+        # Отримуємо ім'я користувача з 3-го стовпця (змінюй індекс за потреби)
+        user_name = found_data[2] if len(found_data) > 2 else "Невідомий користувач"
+
+        return user_name  # Повертаємо лише ім'я
+
+    return None  # Якщо номер не знайдено
