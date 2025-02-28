@@ -45,21 +45,27 @@ class AuthManager:
         """
         phone_number = self.clean_phone_number(phone_number)
 
-        # Отримуємо всі номери та видаляємо зайві символи
-        phone_numbers = [
-            self.clean_phone_number(row[1].strip().lstrip("'")) 
-            for row in self.sheet.get_all_values() if len(row) > 1
-        ]
+        # Отримуємо всі значення з таблиці
+        all_data = self.sheet.get_all_values()
 
-        print(f"[DEBUG] Номери в базі: {phone_numbers}")
+        # Фільтруємо лише ті рядки, де є номер телефону
+        valid_rows = [row for row in all_data[1:] if len(row) > 1 and row[1].strip()]
+
+        # Витягуємо тільки чисті номери телефонів
+        phone_numbers = [self.clean_phone_number(row[1].strip()) for row in valid_rows]
+
+        print(f"DEBUG: Отримано номер: {phone_number}")
+        print(f"DEBUG: Номери в базі (після очищення): {phone_numbers}")
 
         if phone_number in phone_numbers:
-            row_index = phone_numbers.index(phone_number) + 1
-            found_data = self.sheet.row_values(row_index + 1)  # Отримуємо весь рядок
+            row_index = phone_numbers.index(phone_number)  # Знаходимо правильний індекс
+            found_data = valid_rows[row_index]  # Беремо відповідний рядок
 
-            # Отримуємо ім'я користувача з 3-го стовпця (змінюй індекс за потреби)
+            print(f"DEBUG: Знайдено рядок у таблиці: {found_data}")
+
+            # Отримуємо ім'я користувача з третього стовпця (індекс 2 у Python)
             user_name = found_data[2].strip() if len(found_data) > 2 else "Невідомий користувач"
 
-            return user_name  # Повертаємо лише ім'я
+            return user_name  # Повертаємо ім'я
 
         return None  # Якщо номер не знайдено
