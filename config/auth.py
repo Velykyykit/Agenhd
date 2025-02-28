@@ -1,44 +1,41 @@
-import telebot
 import os
-from menu.keyboards import get_phone_keyboard  # Імпортуємо клавіатуру
-from config.auth import check_user_in_database  # Імпортуємо функцію перевірки номера
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
-# Отримуємо токен з змінної середовища
-TOKEN = os.getenv("TOKEN")  
-bot = telebot.TeleBot(TOKEN)
+# Отримуємо змінні з Railway
+SHEET_ID = os.getenv("SHEET_ID")  
+CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")  
 
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    """Запит на надання номера телефону для аутентифікації після команди /start."""
-    markup = get_phone_keyboard()  # Використовуємо тільки одну кнопку
+# Перевірка змінних
+if not SHEET_ID:
+    raise ValueError("❌ Помилка: SHEET_ID не знайдено! Перевірте налаштування Railway.")
+if not CREDENTIALS_FILE:
+    raise ValueError("❌ Помилка: CREDENTIALS_FILE не знайдено! Перевірте налаштування Railway.")
 
-    bot.send_message(
-        message.chat.id,
-        "Поділіться номером для аутентифікації:",  
-        reply_markup=markup  
-    )
+# Авторизація в Google Sheets
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILE, scope)
+client = gspread.authorize(creds)
 
-@bot.message_handler(content_types=['contact'])
-def handle_contact(message):
-    """Обробляє отримання номера телефону від користувача та перевіряє його в базі даних."""
-    if message.contact:
-        phone_number = message.contact.phone_number
+# Відкриваємо аркуш "contact"
+sheet = client.open_by_key(SHEET_ID).worksheet("contact")
 
-        # Перевірка номера в базі даних
-        user_name = check_user_in_database(phone_number)
+def check_user_in_database(phone_number):
+    """
+    Перевіряє, чи є номер телефону у базі Google Sheets.
+    Повертає лише ім'я користувача, якщо знайдено.
+    """
+    # Отримуємо всі значення з другого стовпця (номери телефонів)
+    phone_numbers = sheet.col_values(2)  
 
-        if user_name:
-            bot.send_message(
-                message.chat.id,
-                f"✅ Вітаю, *{user_name}*! Ви успішно ідентифіковані. 🎉"
-            )
-        else:
-            bot.send_message(
-                message.chat.id,
-                "❌ Ваш номер не знайдено у базі. Зверніться до адміністратора."
-            )
+    # Пошук номера телефону у списку
+    if phone_number in phone_numbers:
+        row_index = phone_numbers.index(phone_number) + 1
+        found_data = sheet.row_values(row_index)  # Отримуємо весь рядок
 
-# Запуск бота
-if __name__ == "__main__":
-    print("Бот запущено. Очікування повідомлень...")
-    bot.polling(none_stop=True)
+        # Отримуємо ім'я користувача з 3-го стовпця (змінюй індекс за потреби)
+        user_name = found_data[2] if len(found_data) > 2 else "Невідомий користувач"
+
+        return user_name  # Повертаємо лише ім'я
+
+    return None  # Якщо номер не знайдено
