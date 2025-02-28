@@ -8,7 +8,15 @@ TOKEN = os.getenv("TOKEN")
 SHEET_ID = os.getenv("SHEET_ID")  
 CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")  
 
-# Передаємо ці змінні в AuthManager (який керує підключенням до Google Sheets)
+# Перевіряємо, чи всі змінні встановлені
+if not TOKEN:
+    raise ValueError("❌ TOKEN не знайдено! Перевірте змінні Railway.")
+if not SHEET_ID:
+    raise ValueError("❌ SHEET_ID не знайдено! Перевірте змінні Railway.")
+if not CREDENTIALS_FILE:
+    raise ValueError("❌ CREDENTIALS_FILE не знайдено! Перевірте змінні Railway.")
+
+# Передаємо ці змінні в AuthManager
 auth_manager = AuthManager(SHEET_ID, CREDENTIALS_FILE)
 
 # Ініціалізація бота
@@ -30,22 +38,35 @@ def handle_contact(message):
     """Обробляє отримання номера телефону від користувача та перевіряє його в базі даних."""
     if message.contact:
         phone_number = message.contact.phone_number
+        phone_number = auth_manager.clean_phone_number(phone_number)  # Очищуємо номер
 
-        # Використовуємо AuthManager для перевірки номера
-        user_name = auth_manager.check_user_in_database(phone_number)
+        print(f"[DEBUG] Отримано номер: {phone_number}")
 
-        if user_name:
+        try:
+            user_name = auth_manager.check_user_in_database(phone_number)
+            print(f"[DEBUG] Відповідь від auth.py: {user_name}")
+
+            if user_name:
+                bot.send_message(
+                    message.chat.id,
+                    f"✅ Вітаю, *{user_name}*! Ви успішно ідентифіковані. 🎉",
+                    parse_mode="Markdown"
+                )
+            else:
+                bot.send_message(
+                    message.chat.id,
+                    "❌ Ваш номер не знайдено у базі. Зверніться до адміністратора."
+                )
+
+        except Exception as e:
             bot.send_message(
                 message.chat.id,
-                f"✅ Вітаю, *{user_name}*! Ви успішно ідентифіковані. 🎉",
-                parse_mode="Markdown"
+                "❌ Сталася помилка під час перевірки номера. Спробуйте пізніше."
             )
-        else:
-            bot.send_message(
-                message.chat.id,
-                "❌ Ваш номер не знайдено у базі. Зверніться до адміністратора."
-            )
+            print(f"❌ ПОМИЛКА: {e}")
 
 if __name__ == "__main__":
-    print("Бот запущено. Очікування повідомлень...")
+    print("✅ Бот запущено. Очікування повідомлень...")
+    
+    bot.remove_webhook()  # Очищаємо Webhook перед запуском polling
     bot.polling(none_stop=True)
