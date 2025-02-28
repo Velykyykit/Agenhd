@@ -1,6 +1,7 @@
 import telebot
 import os
 from menu.keyboards import get_phone_keyboard  # Імпортуємо клавіатуру для запиту телефону
+from config.auth import check_user_in_database  # Імпортуємо функцію для перевірки номера у базі
 
 # Отримуємо токен з змінної середовища
 TOKEN = os.getenv("TOKEN")  
@@ -21,13 +22,23 @@ def send_welcome(message):
 # Обробник отриманого контакту
 @bot.message_handler(content_types=['contact'])
 def handle_contact(message):
-    """Обробляє отримання номера телефону від користувача."""
+    """Обробляє отримання номера телефону від користувача та перевіряє його в базі даних."""
     if message.contact:
         phone_number = message.contact.phone_number
-        bot.send_message(
-            message.chat.id,
-            f"Дякую за надання номера телефону: {phone_number}"
-        )
+
+        # Перевірка номера в базі даних
+        user_name, center = check_user_in_database(phone_number)
+
+        if user_name:
+            bot.send_message(
+                message.chat.id,
+                f"✅ Вітаю, *{user_name}*! Ви успішно ідентифіковані. 🎉"
+            )
+        else:
+            bot.send_message(
+                message.chat.id,
+                "Ваш номер не знайдено в системі. Зверніться до адміністратора."
+            )
 
 # Запуск бота
 if __name__ == "__main__":
