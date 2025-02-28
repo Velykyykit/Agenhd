@@ -8,7 +8,7 @@ bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    """Запит на надання номера телефону без привітання."""
+    """Запит на надання номера телефону після команди /start."""
     # Використовуємо функцію get_phone_keyboard() для запиту тільки номера телефону
     markup = get_phone_keyboard()  # Використовуємо тільки одну кнопку
 
