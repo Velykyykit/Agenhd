@@ -1,27 +1,35 @@
-from telebot.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+import telebot
+import os
+from menu.keyboards import get_phone_keyboard  # Імпортуємо клавіатуру для запиту телефону
 
-def get_phone_keyboard():
-    """
-    Клавіатура для запиту номера телефону.
-    """
-    markup = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-    phone_button = KeyboardButton("📲 Поділитися номером", request_contact=True)
-    restart_button = KeyboardButton("🔄 Почати спочатку")
-    markup.add(phone_button)
-    markup.add(restart_button)
-    return markup
+# Отримуємо токен з змінної середовища
+TOKEN = os.getenv("TOKEN")  
+bot = telebot.TeleBot(TOKEN)
 
-def get_restart_keyboard():
-    """
-    Клавіатура для повернення на початок.
-    """
-    markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    restart_button = KeyboardButton("🔄 Почати спочатку")
-    markup.add(restart_button)
-    return markup
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    """Привітання після команди /start та запит на надання номера телефону."""
+    # Використовуємо функцію get_phone_keyboard() з menu/keyboards.py
+    markup = get_phone_keyboard()
 
-def remove_keyboard():
-    """
-    Видаляє клавіатуру (наприклад, після авторизації).
-    """
-    return ReplyKeyboardRemove()
+    bot.send_message(
+        message.chat.id,
+        "Привіт! Я бот. Натисніть кнопку, щоб поділитися своїм номером телефону.",
+        reply_markup=markup
+    )
+
+# Обробник отриманого контакту
+@bot.message_handler(content_types=['contact'])
+def handle_contact(message):
+    """Обробляє отримання номера телефону від користувача."""
+    if message.contact:
+        phone_number = message.contact.phone_number
+        bot.send_message(
+            message.chat.id,
+            f"Дякую за надання номера телефону: {phone_number}"
+        )
+
+# Запуск бота
+if __name__ == "__main__":
+    print("Бот запущено. Очікування повідомлень...")
+    bot.polling(none_stop=True)
