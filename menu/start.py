@@ -1,7 +1,9 @@
 import telebot
+import os
 from keyboards import phone_number_keyboard
 
-TOKEN = "your_telegram_bot_token"
+# Отримання токену з змінної середовища
+TOKEN = os.getenv("TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start'])
@@ -13,4 +15,3 @@ def start(message):
     )
 
 bot.polling(none_stop=True)
-
