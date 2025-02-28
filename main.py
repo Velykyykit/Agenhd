@@ -1,21 +1,14 @@
-from config.settings import TOKEN  # Зчитування токена з налаштувань
 import telebot
-from menu.keyboards import get_phone_keyboard  # Клавіатура для запиту телефону
-from config.auth import register_auth_handlers  # Реєстрація обробників аутентифікації
+import os
 
-# Ініціалізація бота
+# Отримуємо токен з змінної середовища
+TOKEN = os.getenv("TOKEN")  
 bot = telebot.TeleBot(TOKEN)
 
-# Реєстрація обробників
-register_auth_handlers(bot)
-
 @bot.message_handler(commands=['start'])
-def start(message):
-    bot.send_message(
-        message.chat.id,
-        "Вітаємо! Натисніть кнопку, щоб поділитися номером телефону:",
-        reply_markup=get_phone_keyboard()
-    )
+def send_welcome(message):
+    """Привітання після команди /start."""
+    bot.send_message(message.chat.id, "Привіт! Я бот.")
 
 # Запуск бота
 if __name__ == "__main__":
