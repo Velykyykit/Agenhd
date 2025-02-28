@@ -1,4 +1,5 @@
 import os
+import json
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -14,7 +15,8 @@ if not CREDENTIALS_FILE:
 
 # Авторизація в Google Sheets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILE, scope)
+creds_json = json.loads(CREDENTIALS_FILE)  # Розбираємо JSON з змінної
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_json, scope)
 client = gspread.authorize(creds)
 
 # Відкриваємо аркуш "contact"
