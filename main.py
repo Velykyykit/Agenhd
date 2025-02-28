@@ -1,6 +1,6 @@
 import telebot
 import os
-from menu.keyboards import get_phone_keyboard  # Імпортуємо клавіатуру для запиту телефону
+from menu.keyboards import get_phone_keyboard, get_restart_keyboard  # Імпортуємо клавіатури
 
 # Отримуємо токен з змінної середовища
 TOKEN = os.getenv("TOKEN")  
@@ -9,8 +9,8 @@ bot = telebot.TeleBot(TOKEN)
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     """Привітання після команди /start та запит на надання номера телефону."""
-    # Використовуємо функцію get_phone_keyboard() з menu/keyboards.py
-    markup = get_phone_keyboard()
+    # Використовуємо функцію get_phone_keyboard() для запиту тільки номера телефону
+    markup = get_phone_keyboard()  # Зараз використовується тільки одна кнопка
 
     bot.send_message(
         message.chat.id,
