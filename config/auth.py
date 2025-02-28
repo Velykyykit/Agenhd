@@ -12,16 +12,15 @@ class AuthManager:
         if not self.credentials_file:
             raise ValueError("❌ CREDENTIALS_FILE не знайдено! Перевірте змінні Railway.")
 
-        # Визначаємо шлях до файлу у кореневій папці
-        BASE_DIR = os.path.dirname(os.path.abspath(__file__))  
-        CREDENTIALS_PATH = os.path.join(BASE_DIR, self.credentials_file)
+        # Перевірка існування JSON-файлу
+        if not os.path.exists(self.credentials_file):
+            raise FileNotFoundError(f"❌ Файл не знайдено: {self.credentials_file}")
 
-        # Виводимо шлях до файлу в логах (щоб перевірити)
-        print(f"DEBUG: Використовується CREDENTIALS_FILE: {CREDENTIALS_PATH}")
+        print(f"DEBUG: Використовується CREDENTIALS_FILE: {self.credentials_file}")
 
         # Авторизація в Google Sheets
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        self.creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_PATH, scope)
+        self.creds = ServiceAccountCredentials.from_json_keyfile_name(self.credentials_file, scope)
         self.client = gspread.authorize(self.creds)
 
         # Відкриваємо аркуш "contact"
