@@ -1,50 +1,8 @@
-from fpdf import FPDF
-import os
-import gspread
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-from menu.keyboards import get_restart_keyboard
-from datetime import datetime
-import pytz
-
-# Отримуємо часовий пояс Києва
-kyiv_tz = pytz.timezone("Europe/Kiev")
-
-def get_sklad_menu():
-    """Меню складу."""
-    markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("🛒 Зробити Замовлення", callback_data="order"))
-    markup.add(InlineKeyboardButton("📊 Перевірити Наявність", callback_data="check_stock"))
-    return markup
-
-def handle_sklad(bot, message):
-    """Функція для обробки складу."""
-    bot.send_message(message.chat.id, "📦 Ви у розділі складу. Оберіть дію:", reply_markup=get_sklad_menu())
-    bot.send_message(message.chat.id, "🔄 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=get_restart_keyboard())
-
-def get_all_stock():
-    """Отримує всі товари зі складу."""
-    CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
-    gc = gspread.service_account(filename=CREDENTIALS_PATH)
-    sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
-    worksheet = sh.worksheet("SKLAD")
-
-    data = worksheet.get_all_values()
-    stock_items = []
-
-    for row in data[1:]:  # Пропускаємо заголовок
-        stock_items.append({
-            "id": row[0],
-            "course": row[1],
-            "name": row[2],
-            "stock": int(row[3]) if row[3].isdigit() else 0,
-            "available": int(row[4]) if row[4].isdigit() else 0,
-            "price": int(row[5]) if row[5].isdigit() else 0
-        })
-
-    return stock_items
-
 def show_all_stock(bot, message):
     """Генерує PDF-файл зі списком товарів і надсилає користувачу."""
+    # Надсилаємо повідомлення про очікування
+    wait_message = bot.send_message(message.chat.id, "⏳ Зачекайте, документ формується...")
+
     items = get_all_stock()
 
     # Отримуємо поточний час у Києві
@@ -57,17 +15,16 @@ def show_all_stock(bot, message):
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
-    
-    # Використовуємо Arial без емодзі (FPDF не підтримує Юнікод)
-    pdf.add_font("Arial", "", "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf", uni=True)
-    pdf.set_font("Arial", style="B", size=16)
+
+    # Використовуємо стандартний шрифт
+    pdf.set_font("Helvetica", style="B", size=16)
 
     # Заголовок (без емодзі)
     pdf.cell(200, 10, f"Наявність товарів на складі (станом на {now})", ln=True, align="C")
     pdf.ln(10)
 
     # Створюємо таблицю
-    pdf.set_font("Arial", size=10)
+    pdf.set_font("Helvetica", size=10)
     pdf.cell(20, 8, "ID", border=1, align="C")
     pdf.cell(50, 8, "Курс", border=1, align="C")
     pdf.cell(50, 8, "Товар", border=1, align="C")
@@ -89,25 +46,12 @@ def show_all_stock(bot, message):
     # Зберігаємо PDF
     pdf.output(filename, "F")
 
+    # Видаляємо повідомлення "Зачекайте..."
+    bot.delete_message(chat_id=message.chat.id, message_id=wait_message.message_id)
+
     # Відправляємо файл користувачу
     with open(filename, "rb") as file:
-        bot.send_document(message.chat.id, file, caption="Ось список наявних товарів на складі.")
+        bot.send_document(message.chat.id, file, caption="📄 Ось список наявних товарів на складі.")
 
     # Видаляємо тимчасовий файл
     os.remove(filename)
-
-def show_courses_for_order(bot, message):
-    """Показує список курсів для замовлення."""
-    CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
-    gc = gspread.service_account(filename=CREDENTIALS_PATH)
-    
-    sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
-    worksheet = sh.worksheet("dictionary")  # Вказати назву аркуша з курсами
-
-    courses = worksheet.col_values(1)  # Отримати всі назви курсів
-    markup = InlineKeyboardMarkup()
-
-    for course in courses:
-        markup.add(InlineKeyboardButton(course, callback_data=f"course_{course}"))
-
-    bot.send_message(message.chat.id, "📚 Оберіть курс для замовлення:", reply_markup=markup)
