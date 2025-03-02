@@ -52,17 +52,19 @@ def handle_contact(message):
         try:
             user_info = auth_manager.check_user_in_database(phone_number)
             if user_info:
-                user_id, user_name = user_info
+                user_id, user_name, email, user_role = user_info
 
-                # **Зберігаємо ID, ім'я та номер у словник**
+                # **Зберігаємо ID, ім'я, email, роль та номер у словник**
                 user_data[message.chat.id] = {
                     "id": user_id,
                     "name": user_name,
+                    "email": email,
+                    "role": user_role,
                     "phone": phone_number
                 }
 
                 # **Дебаг вивід**
-                print(f"[DEBUG] Авторизація: ID={user_id}, Ім'я={user_name}, Телефон={phone_number}")
+                print(f"[DEBUG] Авторизація: ID={user_id}, Ім'я={user_name}, Email={email}, Роль={user_role}, Телефон={phone_number}")
 
                 # **Прибираємо клавіатуру після авторизації**
                 bot.send_message(
