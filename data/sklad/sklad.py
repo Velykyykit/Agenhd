@@ -9,10 +9,16 @@ from menu.keyboards import get_restart_keyboard
 # Налаштовуємо часовий пояс для Києва
 kyiv_tz = pytz.timezone("Europe/Kiev")
 
-# Використовуємо шлях до credentials.json із змінних Railway
+# 🔍 Шлях до credentials.json
 CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
+
+# 🔍 Шлях до шрифту
+FONT_PATH = os.path.join("/app/config/fonts", "DejaVuSans.ttf")
+
 print("🔍 Шлях до credentials.json:", CREDENTIALS_PATH)
 print("📂 Файл існує:", os.path.exists(CREDENTIALS_PATH))
+print("🔍 Шлях до шрифту:", FONT_PATH)
+print("📂 Шрифт існує:", os.path.exists(FONT_PATH))
 
 def get_sklad_menu():
     """Меню складу."""
@@ -58,15 +64,24 @@ def show_all_stock(bot, message):
         filename = f"sklad_HD_{now}.pdf"
 
         pdf = FPDF()
-        pdf.set_font("Arial", "", 12)  # Використання стандартного шрифту
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
-        pdf.set_font("Arial", "", 10)  # Використання стандартного шрифту
 
+        # Використовуємо шрифт DejaVuSans, якщо він є
+        if os.path.exists(FONT_PATH):
+            pdf.add_font("DejaVu", "", FONT_PATH, uni=True)
+            pdf.set_font("DejaVu", "", 12)
+            print("✅ Використовується шрифт DejaVuSans")
+        else:
+            pdf.set_font("Helvetica", "", 12)
+            print("⚠️ Шрифт DejaVuSans не знайдено. Використовується Helvetica.")
+
+        # Заголовок
         pdf.cell(200, 10, f"Наявність товарів на складі (станом на {now})", ln=True, align="C")
         pdf.ln(10)
 
-        pdf.set_font("Arial", "", 10)
+        # Таблиця
+        pdf.set_font("DejaVu", "", 10)
         pdf.cell(20, 8, "ID", border=1, align="C")
         pdf.cell(50, 8, "Курс", border=1, align="C")
         pdf.cell(50, 8, "Товар", border=1, align="C")
