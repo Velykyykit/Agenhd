@@ -102,7 +102,7 @@ def get_main_menu():
 def handle_main_menu(call):
     """Обробляє вибір кнопок у головному меню."""
     if call.data == "sklad":
-        bot.send_message(call.message.chat.id, "📦 Ви у розділі складу. Оберіть дію:")
+        handle_sklad(bot, call.message)  # Викликаємо функцію складу
     
     elif call.data == "tasks":
         bot.send_message(call.message.chat.id, "📝 Розділ 'Завдання' ще в розробці.")
