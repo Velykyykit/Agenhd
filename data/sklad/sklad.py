@@ -58,7 +58,7 @@ def show_all_stock(bot, message):
         filename = f"sklad_HD_{now}.pdf"
 
         pdf = FPDF()
-        pdf.add_font("DejaVu", "", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", uni=True)
+        pdf.set_font("Helvetica", "", 12)  # Використання стандартного шрифту
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
         pdf.set_font("DejaVu", "", 12)
