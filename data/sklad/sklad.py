@@ -1,11 +1,8 @@
+from fpdf import FPDF
+import os
+import gspread
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from menu.keyboards import get_restart_keyboard
-import gspread
-import os
-
-# Завантаження облікових даних
-CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
-gc = gspread.service_account(filename=CREDENTIALS_PATH)
 
 def get_sklad_menu():
     """Меню складу."""
@@ -21,13 +18,14 @@ def handle_sklad(bot, message):
 
 def get_all_stock():
     """Отримує всі товари зі складу."""
+    gc = gspread.service_account(filename="credentials.json")
     sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
     worksheet = sh.worksheet("SKLAD")
 
     data = worksheet.get_all_values()
     stock_items = []
 
-    for row in data[1:]:
+    for row in data[1:]:  # Пропускаємо заголовок
         stock_items.append({
             "id": row[0],
             "course": row[1],
@@ -40,25 +38,49 @@ def get_all_stock():
     return stock_items
 
 def show_all_stock(bot, message):
-    """Відображає всі товари на складі."""
+    """Генерує PDF-файл зі списком товарів і надсилає користувачу."""
     items = get_all_stock()
-    response = "📦 Усі товари на складі:\n\n"
 
+    # Назва файлу (уникнення конфліктів)
+    filename = f"stock_{message.chat.id}.pdf"
+
+    # Створюємо PDF-документ
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_font("Arial", style="", size=12)
+
+    # Заголовок
+    pdf.set_font("Arial", style="B", size=16)
+    pdf.cell(200, 10, "📦 Наявність товарів на складі", ln=True, align="C")
+    pdf.ln(10)
+
+    # Створюємо таблицю
+    pdf.set_font("Arial", size=10)
+    pdf.cell(20, 8, "ID", border=1, align="C")
+    pdf.cell(50, 8, "Курс", border=1, align="C")
+    pdf.cell(50, 8, "Товар", border=1, align="C")
+    pdf.cell(20, 8, "На складі", border=1, align="C")
+    pdf.cell(20, 8, "Доступно", border=1, align="C")
+    pdf.cell(20, 8, "Ціна", border=1, align="C")
+    pdf.ln()
+
+    # Додаємо дані в таблицю
     for item in items:
-        response += f"🔹 [{item['id']}] {item['name']} ({item['course']})\n"
-        response += f"   🔢 {item['stock']} шт. | 🛒 Доступно: {item['available']} шт. | 💰 {item['price']}₴\n\n"
+        pdf.cell(20, 8, str(item["id"]), border=1, align="C")
+        pdf.cell(50, 8, item["course"], border=1, align="L")
+        pdf.cell(50, 8, item["name"], border=1, align="L")
+        pdf.cell(20, 8, str(item["stock"]), border=1, align="C")
+        pdf.cell(20, 8, str(item["available"]), border=1, align="C")
+        pdf.cell(20, 8, f"{item['price']}₴", border=1, align="C")
+        pdf.ln()
 
-    bot.send_message(message.chat.id, response)
+    # Зберігаємо PDF
+    pdf.output(filename)
 
-def show_courses_for_order(bot, message):
-    """Показує список курсів для замовлення."""
-    sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
-    worksheet = sh.worksheet("dictionary")
+    # Відправляємо файл користувачу
+    with open(filename, "rb") as file:
+        bot.send_document(message.chat.id, file, caption="📄 Ось список наявних товарів на складі.")
 
-    courses = worksheet.col_values(1)
-    markup = InlineKeyboardMarkup()
-
-    for course in courses:
-        markup.add(InlineKeyboardButton(course, callback_data=f"course_{course}"))
-
-    bot.send_message(message.chat.id, "📚 Оберіть курс для замовлення:", reply_markup=markup)
+    # Видаляємо тимчасовий файл
+    os.remove(filename)
