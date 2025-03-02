@@ -1,6 +1,6 @@
 import os
 import telebot
-from menu.keyboards import get_phone_keyboard  
+from menu.keyboards import get_phone_keyboard, get_restart_keyboard  # Додаємо кнопки
 from config.auth import AuthManager  # Імпортуємо клас аутентифікації
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
 from data.sklad.sklad import handle_sklad  # Імпортуємо обробник для складу
