@@ -1,52 +1,50 @@
 import os
 import telebot
-from menu.keyboards import get_phone_keyboard  
-from config.auth import AuthManager  # Імпортуємо клас аутентифікації
+from menu.keyboards import get_phone_keyboard
+from config.auth import AuthManager
 
 # Отримуємо змінні з Railway
-TOKEN = os.getenv("TOKEN")  
-SHEET_ID = os.getenv("SHEET_ID")  
-CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")  
+TOKEN = os.getenv("TOKEN")
+SHEET_ID = os.getenv("SHEET_ID")
+CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
 
-# Перевіряємо, чи всі змінні встановлені
-if not TOKEN:
-    raise ValueError("❌ TOKEN не знайдено! Перевірте змінні Railway.")
-if not SHEET_ID:
-    raise ValueError("❌ SHEET_ID не знайдено! Перевірте змінні Railway.")
-if not CREDENTIALS_FILE:
-    raise ValueError("❌ CREDENTIALS_FILE не знайдено! Перевірте змінні Railway.")
+if not TOKEN or not SHEET_ID or not CREDENTIALS_FILE:
+    raise ValueError("❌ Не знайдено необхідні змінні середовища!")
 
-# Передаємо ці змінні в AuthManager
 auth_manager = AuthManager(SHEET_ID, CREDENTIALS_FILE)
-
-# Ініціалізація бота
 bot = telebot.TeleBot(TOKEN)
+
+# **Створюємо глобальний словник для збереження даних**
+user_data = {}
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    """Запит на надання номера телефону для аутентифікації після команди /start."""
-    markup = get_phone_keyboard()  
-
+    """Запит на номер телефону при першому запуску."""
+    markup = get_phone_keyboard()
     bot.send_message(
         message.chat.id,
-        "Поділіться номером для аутентифікації:",  
-        reply_markup=markup  
+        "Поділіться номером для аутентифікації:",
+        reply_markup=markup
     )
 
 @bot.message_handler(content_types=['contact'])
 def handle_contact(message):
-    """Обробляє отримання номера телефону від користувача та перевіряє його в базі даних."""
+    """Перевірка номера телефону та збереження даних у пам'яті бота."""
     if message.contact:
-        phone_number = message.contact.phone_number
-        phone_number = auth_manager.clean_phone_number(phone_number)  # Очищуємо номер
+        phone_number = auth_manager.clean_phone_number(message.contact.phone_number)
 
         print(f"[DEBUG] Отримано номер: {phone_number}")
 
         try:
             user_name = auth_manager.check_user_in_database(phone_number)
-            print(f"[DEBUG] Відповідь від auth.py: {user_name}")
 
             if user_name:
+                # **Зберігаємо дані в словник**
+                user_data[message.chat.id] = {
+                    "name": user_name,
+                    "phone": phone_number
+                }
+
                 bot.send_message(
                     message.chat.id,
                     f"✅ Вітаю, *{user_name}*! Ви успішно ідентифіковані. 🎉",
@@ -65,8 +63,24 @@ def handle_contact(message):
             )
             print(f"❌ ПОМИЛКА: {e}")
 
+@bot.message_handler(commands=['whoami'])
+def who_am_i(message):
+    """Повертає ім'я та номер телефону користувача, якщо він вже авторизований."""
+    user_info = user_data.get(message.chat.id)
+    
+    if user_info:
+        bot.send_message(
+            message.chat.id,
+            f"👤 Ви авторизовані як: *{user_info['name']}*\n📞 Ваш номер: {user_info['phone']}",
+            parse_mode="Markdown"
+        )
+    else:
+        bot.send_message(
+            message.chat.id,
+            "❌ Ви ще не авторизувалися. Надішліть /start для початку."
+        )
+
 if __name__ == "__main__":
     print("✅ Бот запущено. Очікування повідомлень...")
-    
-    bot.remove_webhook()  # Очищаємо Webhook перед запуском polling
+    bot.remove_webhook()
     bot.polling(none_stop=True)
