@@ -19,12 +19,17 @@ bot = telebot.TeleBot(TOKEN)
 user_data = {}
 
 def get_main_menu():
-    """Головне меню у вигляді вбудованих кнопок."""
-    markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("📦 Склад", callback_data="warehouse"))
-    markup.add(InlineKeyboardButton("📌 Створити Завдання", callback_data="create_task"))
-    markup.add(InlineKeyboardButton("📝 Мої Завдання", callback_data="my_tasks"))
+    """Головне меню з більшими кнопками та емодзі."""
+    markup = InlineKeyboardMarkup(row_width=2)  # Збільшує ширину кнопок
+    markup.add(
+        InlineKeyboardButton("🔵 📦 Склад", callback_data="warehouse"),
+        InlineKeyboardButton("🔵 📌 Створити Завдання", callback_data="create_task")
+    )
+    markup.add(
+        InlineKeyboardButton("🔵 📝 Мої Завдання", callback_data="my_tasks")
+    )
     return markup
+
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
