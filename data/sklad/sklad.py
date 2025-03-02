@@ -84,3 +84,17 @@ def show_all_stock(bot, message):
 
     # Видаляємо тимчасовий файл
     os.remove(filename)
+
+def show_courses_for_order(bot, message):
+    """Показує список курсів для замовлення."""
+    gc = gspread.service_account(filename="credentials.json")
+    sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
+    worksheet = sh.worksheet("dictionary")  # Вказати назву аркуша з курсами
+
+    courses = worksheet.col_values(1)  # Отримати всі назви курсів
+    markup = InlineKeyboardMarkup()
+
+    for course in courses:
+        markup.add(InlineKeyboardButton(course, callback_data=f"course_{course}"))
+
+    bot.send_message(message.chat.id, "📚 Оберіть курс для замовлення:", reply_markup=markup)
