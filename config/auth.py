@@ -21,7 +21,7 @@ class AuthManager:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         self.creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_PATH, scope)
         self.client = gspread.authorize(self.creds)
-        self.sheet = self.client.open_by_key(self.sheet_id).worksheet("BASE")  # Назва аркуша "BASE"
+        self.sheet = self.client.open_by_key(self.sheet_id).worksheet("contact")  # Назва аркуша "contact"
 
     def clean_phone_number(self, phone):
         """Очищення номера телефону, зберігаючи коректний формат."""
