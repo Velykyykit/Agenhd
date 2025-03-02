@@ -66,7 +66,7 @@ def show_all_stock(bot, message):
         pdf.cell(200, 10, f"Наявність товарів на складі (станом на {now})", ln=True, align="C")
         pdf.ln(10)
 
-        pdf.set_font("DejaVu", "", 10)
+        pdf.set_font("Helvetica", "", 10)
         pdf.cell(20, 8, "ID", border=1, align="C")
         pdf.cell(50, 8, "Курс", border=1, align="C")
         pdf.cell(50, 8, "Товар", border=1, align="C")
