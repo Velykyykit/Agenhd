@@ -57,11 +57,13 @@ def show_all_stock(bot, message):
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
-    pdf.set_font("Arial", style="", size=12)
-
-    # Заголовок
+    
+    # Використовуємо Arial без емодзі (FPDF не підтримує Юнікод)
+    pdf.add_font("Arial", "", "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf", uni=True)
     pdf.set_font("Arial", style="B", size=16)
-    pdf.cell(200, 10, f"📦 Наявність товарів на складі (станом на {now})", ln=True, align="C")
+
+    # Заголовок (без емодзі)
+    pdf.cell(200, 10, f"Наявність товарів на складі (станом на {now})", ln=True, align="C")
     pdf.ln(10)
 
     # Створюємо таблицю
@@ -85,11 +87,11 @@ def show_all_stock(bot, message):
         pdf.ln()
 
     # Зберігаємо PDF
-    pdf.output(filename)
+    pdf.output(filename, "F")
 
     # Відправляємо файл користувачу
     with open(filename, "rb") as file:
-        bot.send_document(message.chat.id, file, caption="📄 Ось список наявних товарів на складі.")
+        bot.send_document(message.chat.id, file, caption="Ось список наявних товарів на складі.")
 
     # Видаляємо тимчасовий файл
     os.remove(filename)
