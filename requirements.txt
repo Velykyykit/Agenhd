@@ -2,3 +2,4 @@ telebot
 gspread
 oauth2client
 pytz
+fpdf
