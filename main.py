@@ -1,5 +1,6 @@
 import os
 import telebot
+from telebot.types import ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from menu.keyboards import get_phone_keyboard
 from config.auth import AuthManager
 
@@ -16,6 +17,14 @@ bot = telebot.TeleBot(TOKEN)
 
 # **Створюємо глобальний словник для збереження даних**
 user_data = {}
+
+def get_main_menu():
+    """Головне меню у вигляді вбудованих кнопок."""
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("📦 Склад", callback_data="warehouse"))
+    markup.add(InlineKeyboardButton("📌 Створити Завдання", callback_data="create_task"))
+    markup.add(InlineKeyboardButton("📝 Мої Завдання", callback_data="my_tasks"))
+    return markup
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -45,11 +54,21 @@ def handle_contact(message):
                     "phone": phone_number
                 }
 
+                # **Прибираємо кнопку "📲 Поділитися номером"**
                 bot.send_message(
                     message.chat.id,
                     f"✅ Вітаю, *{user_name}*! Ви успішно ідентифіковані. 🎉",
-                    parse_mode="Markdown"
+                    parse_mode="Markdown",
+                    reply_markup=ReplyKeyboardRemove()  # Видаляє стару клавіатуру
                 )
+
+                # **Надсилаємо головне меню**
+                bot.send_message(
+                    message.chat.id,
+                    "Оберіть дію:",
+                    reply_markup=get_main_menu()
+                )
+
             else:
                 bot.send_message(
                     message.chat.id,
@@ -63,22 +82,15 @@ def handle_contact(message):
             )
             print(f"❌ ПОМИЛКА: {e}")
 
-@bot.message_handler(commands=['whoami'])
-def who_am_i(message):
-    """Повертає ім'я та номер телефону користувача, якщо він вже авторизований."""
-    user_info = user_data.get(message.chat.id)
-    
-    if user_info:
-        bot.send_message(
-            message.chat.id,
-            f"👤 Ви авторизовані як: *{user_info['name']}*\n📞 Ваш номер: {user_info['phone']}",
-            parse_mode="Markdown"
-        )
-    else:
-        bot.send_message(
-            message.chat.id,
-            "❌ Ви ще не авторизувалися. Надішліть /start для початку."
-        )
+@bot.callback_query_handler(func=lambda call: True)
+def handle_callback(call):
+    """Обробка вибору користувача в головному меню."""
+    if call.data == "warehouse":
+        bot.send_message(call.message.chat.id, "📦 Ви обрали *Склад*", parse_mode="Markdown")
+    elif call.data == "create_task":
+        bot.send_message(call.message.chat.id, "📌 Ви обрали *Створити Завдання*", parse_mode="Markdown")
+    elif call.data == "my_tasks":
+        bot.send_message(call.message.chat.id, "📝 Ви обрали *Мої Завдання*", parse_mode="Markdown")
 
 if __name__ == "__main__":
     print("✅ Бот запущено. Очікування повідомлень...")
