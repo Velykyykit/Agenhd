@@ -91,3 +91,20 @@ def show_all_stock(bot, message):
     except Exception as e:
         bot.edit_message_text("❌ Помилка при створенні документа!", chat_id=message.chat.id, message_id=wait_message.message_id)
         print(f"❌ ПОМИЛКА: {e}")
+
+def show_courses_for_order(bot, message):
+    """Показує список курсів для замовлення."""
+    gc = gspread.service_account(filename="/app/credentials.json")
+    sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
+    worksheet = sh.worksheet("dictionary")  # Аркуш із курсами
+
+    courses = worksheet.col_values(1)  # Отримати всі назви курсів
+    if not courses:
+        bot.send_message(message.chat.id, "❌ Немає доступних курсів для замовлення.")
+        return
+
+    markup = InlineKeyboardMarkup()
+    for course in courses:
+        markup.add(InlineKeyboardButton(course, callback_data=f"course_{course}"))
+
+    bot.send_message(message.chat.id, "📚 Оберіть курс для замовлення:", reply_markup=markup)
