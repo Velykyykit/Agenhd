@@ -3,6 +3,7 @@ import telebot
 from telebot.types import ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from menu.keyboards import get_phone_keyboard
 from config.auth import AuthManager
+from data.sklad.sklad import get_sklad_menu, get_restart_keyboard  # Імпортуємо меню складу
 
 # Отримуємо змінні з Railway
 TOKEN = os.getenv("TOKEN")
@@ -30,7 +31,6 @@ def get_main_menu():
     )
     return markup
 
-
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     """Запит на номер телефону при першому запуску."""
@@ -50,21 +50,26 @@ def handle_contact(message):
         print(f"[DEBUG] Отримано номер: {phone_number}")
 
         try:
-            user_name = auth_manager.check_user_in_database(phone_number)
+            user_info = auth_manager.check_user_in_database(phone_number)
+            if user_info:
+                user_id, user_name = user_info
 
-            if user_name:
-                # **Зберігаємо дані в словник**
+                # **Зберігаємо ID, ім'я та номер у словник**
                 user_data[message.chat.id] = {
+                    "id": user_id,
                     "name": user_name,
                     "phone": phone_number
                 }
 
-                # **Прибираємо кнопку "📲 Поділитися номером"**
+                # **Дебаг вивід**
+                print(f"[DEBUG] Авторизація: ID={user_id}, Ім'я={user_name}, Телефон={phone_number}")
+
+                # **Прибираємо клавіатуру після авторизації**
                 bot.send_message(
                     message.chat.id,
                     f"✅ Вітаю, *{user_name}*! Ви успішно ідентифіковані. 🎉",
                     parse_mode="Markdown",
-                    reply_markup=ReplyKeyboardRemove()  # Видаляє стару клавіатуру
+                    reply_markup=ReplyKeyboardRemove()
                 )
 
                 # **Надсилаємо головне меню**
@@ -90,8 +95,15 @@ def handle_contact(message):
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback(call):
     """Обробка вибору користувача в головному меню."""
+    chat_id = call.message.chat.id
     if call.data == "warehouse":
-        bot.send_message(call.message.chat.id, "📦 Ви обрали *Склад*", parse_mode="Markdown")
+        if chat_id in user_data:
+            user_id = user_data[chat_id]["id"]  # Передаємо ID користувача
+            bot.send_message(chat_id, "📦 Ви обрали *Склад*", parse_mode="Markdown")
+            bot.send_message(chat_id, "Оберіть дію:", reply_markup=get_sklad_menu(user_id))
+            bot.send_message(chat_id, "🔄 Ви можете почати спочатку:", reply_markup=get_restart_keyboard())
+        else:
+            bot.send_message(chat_id, "❌ Ви не авторизовані. Надішліть /start.")
     elif call.data == "create_task":
         bot.send_message(call.message.chat.id, "📌 Ви обрали *Створити Завдання*", parse_mode="Markdown")
     elif call.data == "my_tasks":
