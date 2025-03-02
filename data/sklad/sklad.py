@@ -64,39 +64,28 @@ def show_all_stock(bot, message):
         filename = f"sklad_HD_{now}.pdf"
 
         pdf = FPDF()
+        pdf.add_font("DejaVu", "", "/app/config/fonts/DejaVuSans.ttf", uni=True)
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
+        pdf.set_font("DejaVu", "", 12)
 
-        # Використовуємо шрифт DejaVuSans, якщо він є
-        if os.path.exists(FONT_PATH):
-            pdf.add_font("DejaVu", "", FONT_PATH, uni=True)
-            pdf.set_font("DejaVu", "", 12)
-            print("✅ Використовується шрифт DejaVuSans")
-        else:
-            pdf.set_font("Helvetica", "", 12)
-            print("⚠️ Шрифт DejaVuSans не знайдено. Використовується Helvetica.")
-
-        # Заголовок
         pdf.cell(200, 10, f"Наявність товарів на складі (станом на {now})", ln=True, align="C")
         pdf.ln(10)
 
-        # Таблиця
+        # Заголовки таблиці
         pdf.set_font("DejaVu", "", 10)
         pdf.cell(20, 8, "ID", border=1, align="C")
-        pdf.cell(50, 8, "Курс", border=1, align="C")
-        pdf.cell(50, 8, "Товар", border=1, align="C")
-        pdf.cell(20, 8, "На складі", border=1, align="C")
-        pdf.cell(20, 8, "Доступно", border=1, align="C")
-        pdf.cell(20, 8, "Ціна", border=1, align="C")
+        pdf.cell(80, 8, "Товар", border=1, align="C")
+        pdf.cell(30, 8, "На складі", border=1, align="C")
+        pdf.cell(30, 8, "Ціна", border=1, align="C")
         pdf.ln()
 
+        # Додаємо дані в таблицю
         for item in items:
             pdf.cell(20, 8, str(item["id"]), border=1, align="C")
-            pdf.cell(50, 8, item["course"], border=1, align="L")
-            pdf.cell(50, 8, item["name"], border=1, align="L")
-            pdf.cell(20, 8, str(item["stock"]), border=1, align="C")
-            pdf.cell(20, 8, str(item["available"]), border=1, align="C")
-            pdf.cell(20, 8, f"{item['price']}₴", border=1, align="C")
+            pdf.cell(80, 8, item["name"], border=1, align="L")
+            pdf.cell(30, 8, str(item["stock"]), border=1, align="C")
+            pdf.cell(30, 8, f"{item['price']}₴", border=1, align="C")
             pdf.ln()
 
         pdf.output(filename, "F")
