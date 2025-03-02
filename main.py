@@ -3,6 +3,8 @@ import telebot
 from menu.keyboards import get_phone_keyboard, get_restart_keyboard  # Додаємо get_restart_keyboard
 from config.auth import AuthManager  # Імпортуємо клас аутентифікації
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
+from data.sklad.sklad import handle_sklad  # Імпортуємо обробник складу
+
 
 # Отримуємо змінні з Railway
 TOKEN = os.getenv("TOKEN")  
