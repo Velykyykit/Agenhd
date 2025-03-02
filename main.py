@@ -43,30 +43,35 @@ def handle_contact(message):
         print(f"[DEBUG] Отримано номер: {phone_number}")
 
         try:
-            user_name = auth_manager.check_user_in_database(phone_number)
-            print(f"[DEBUG] Відповідь від auth.py: {user_name}")
+            try:
+    user_data = auth_manager.check_user_in_database(phone_number)
+    print(f"[DEBUG] Відповідь від auth.py: {user_data}")
 
-            if user_name:
-                bot.send_message(
-                    message.chat.id,
-                    f"✅ Вітаю, *{user_name}*! Ви успішно ідентифіковані. 🎉",
-                    parse_mode="Markdown"
-                )
-            else:
-                bot.send_message(
-                    message.chat.id,
-                    "❌ Ваш номер не знайдено у базі. Зверніться до адміністратора."
-                )
+    if user_data:
+        # Кешуємо дані (вони вже кешуються в auth.py, але можемо ще раз вивести лог)
+        cached_data = {
+            "id": user_data["id"],
+            "name": user_data["name"],
+            "email": user_data["email"],
+            "role": user_data["role"]
+        }
+        print(f"[DEBUG] Користувач збережений у кеш: {cached_data}")
 
-        except Exception as e:
-            bot.send_message(
-                message.chat.id,
-                "❌ Сталася помилка під час перевірки номера. Спробуйте пізніше."
-            )
-            print(f"❌ ПОМИЛКА: {e}")
+        # Відправляємо тільки ім'я в чат
+        bot.send_message(
+            message.chat.id,
+            f"✅ Вітаю, *{user_data['name']}*! Ви успішно ідентифіковані. 🎉",
+            parse_mode="Markdown"
+        )
+    else:
+        bot.send_message(
+            message.chat.id,
+            "❌ Ваш номер не знайдено у базі. Зверніться до адміністратора."
+        )
 
-if __name__ == "__main__":
-    print("✅ Бот запущено. Очікування повідомлень...")
-    
-    bot.remove_webhook()  # Очищаємо Webhook перед запуском polling
-    bot.polling(none_stop=True)
+except Exception as e:
+    bot.send_message(
+        message.chat.id,
+        "❌ Сталася помилка під час перевірки номера. Спробуйте пізніше."
+    )
+    print(f"❌ ПОМИЛКА: {e}")
