@@ -1,9 +1,8 @@
 import os
 import telebot
-from menu.keyboards import get_phone_keyboard, get_restart_keyboard  # Додаємо кнопки
+from menu.keyboards import get_phone_keyboard, get_restart_keyboard  # Додаємо get_restart_keyboard
 from config.auth import AuthManager  # Імпортуємо клас аутентифікації
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
-from data.sklad.sklad import handle_sklad  # Імпортуємо обробник для складу
 
 # Отримуємо змінні з Railway
 TOKEN = os.getenv("TOKEN")  
@@ -27,17 +26,17 @@ bot = telebot.TeleBot(TOKEN)
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     """Запит на надання номера телефону для аутентифікації після команди /start."""
-    markup = get_phone_keyboard()  
-
+    markup = get_phone_keyboard()  # Тільки кнопка "Поділитися номером"
+    
     bot.send_message(
         message.chat.id,
-        "Поділіться номером для аутентифікації:",  
+        "📲 Поділіться номером для аутентифікації:",  
         reply_markup=markup  
     )
 
 @bot.message_handler(content_types=['contact'])
 def handle_contact(message):
-    """Обробляє отримання номера телефону від користувача та перевіряє його в базі даних."""
+    """Обробка номера телефону та аутентифікація."""
     if message.contact:
         phone_number = message.contact.phone_number
         phone_number = auth_manager.clean_phone_number(phone_number)  # Очищуємо номер
@@ -49,19 +48,10 @@ def handle_contact(message):
             print(f"[DEBUG] Відповідь від auth.py: {user_data}")
 
             if user_data:
-                # Кешуємо дані для подальшої роботи
-                cached_data = {
-                    "id": user_data["id"],
-                    "name": user_data["name"],
-                    "email": user_data["email"],
-                    "role": user_data["role"]
-                }
-                print(f"[DEBUG] Користувач збережений у кеш: {cached_data}")
-
                 # Видаляємо кнопку "Поділитися номером"
                 remove_keyboard = ReplyKeyboardRemove()
 
-                # Відправляємо тільки ім'я користувача у відповідь
+                # Відправляємо вітальне повідомлення
                 bot.send_message(
                     message.chat.id,
                     f"✅ Вітаю, *{user_data['name']}*! Ви успішно ідентифіковані. 🎉",
@@ -69,12 +59,9 @@ def handle_contact(message):
                     reply_markup=remove_keyboard  # Видаляємо кнопку після авторизації
                 )
 
-                # Відправляємо меню з кнопками
-                bot.send_message(
-                    message.chat.id,
-                    "📌 Оберіть розділ:",
-                    reply_markup=get_main_menu()
-                )
+                # Показуємо головне меню та кнопку "Почати спочатку"
+                send_main_menu(message)
+
             else:
                 bot.send_message(
                     message.chat.id,
@@ -88,6 +75,21 @@ def handle_contact(message):
             )
             print(f"❌ ПОМИЛКА: {e}")
 
+def send_main_menu(message):
+    """Показує головне меню з кнопкою 'Почати спочатку'."""
+    bot.send_message(
+        message.chat.id,
+        "📌 Оберіть розділ:",
+        reply_markup=get_main_menu()
+    )
+    
+    # Додаємо кнопку "🔄 Почати спочатку"
+    bot.send_message(
+        message.chat.id,
+        "🔄 Якщо хочете повернутися, натисніть кнопку:",
+        reply_markup=get_restart_keyboard()
+    )
+
 def get_main_menu():
     """Головне меню з кнопками: Склад, Завдання, Для мене."""
     markup = InlineKeyboardMarkup()
@@ -100,14 +102,29 @@ def get_main_menu():
 def handle_main_menu(call):
     """Обробляє вибір кнопок у головному меню."""
     if call.data == "sklad":
-        bot.send_message(call.message.chat.id, "🔹 Ви перейшли до складу.")
-        handle_sklad(bot, call.message)  # Викликаємо функцію складу
+        bot.send_message(call.message.chat.id, "📦 Ви у розділі складу. Оберіть дію:")
     
     elif call.data == "tasks":
         bot.send_message(call.message.chat.id, "📝 Розділ 'Завдання' ще в розробці.")
     
     elif call.data == "forme":
         bot.send_message(call.message.chat.id, "🙋‍♂️ Розділ 'Для мене' ще в розробці.")
+
+@bot.message_handler(func=lambda message: message.text == "🔄 Почати спочатку")
+def restart_bot(message):
+    """Обробка натискання кнопки '🔄 Почати спочатку'."""
+    bot.send_message(
+        message.chat.id,
+        "🔄 Починаємо спочатку. Оберіть розділ:",
+        reply_markup=get_main_menu()
+    )
+    
+    # Повторно показуємо кнопку "🔄 Почати спочатку"
+    bot.send_message(
+        message.chat.id,
+        "🔄 Якщо хочете повернутися, натисніть кнопку:",
+        reply_markup=get_restart_keyboard()
+    )
 
 if __name__ == "__main__":
     print("✅ Бот запущено. Очікування повідомлень...")
