@@ -1,57 +1,93 @@
+from fpdf import FPDF
+import os
+import gspread
+from datetime import datetime
+import pytz
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from menu.keyboards import get_restart_keyboard
+
+# Налаштовуємо часовий пояс для Києва
+kyiv_tz = pytz.timezone("Europe/Kiev")
+
+def get_sklad_menu():
+    """Меню складу."""
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("🛒 Зробити Замовлення", callback_data="order"))
+    markup.add(InlineKeyboardButton("📊 Перевірити Наявність", callback_data="check_stock"))
+    return markup
+
+def handle_sklad(bot, message):
+    """Функція для обробки складу."""
+    bot.send_message(message.chat.id, "📦 Ви у розділі складу. Оберіть дію:", reply_markup=get_sklad_menu())
+    bot.send_message(message.chat.id, "🔄 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=get_restart_keyboard())
+
+def get_all_stock():
+    """Отримує всі товари зі складу."""
+    gc = gspread.service_account(filename="/app/credentials.json")
+    sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
+    worksheet = sh.worksheet("SKLAD")
+
+    data = worksheet.get_all_values()
+    stock_items = []
+
+    for row in data[1:]:  # Пропускаємо заголовок
+        stock_items.append({
+            "id": row[0],
+            "course": row[1],
+            "name": row[2],
+            "stock": int(row[3]) if row[3].isdigit() else 0,
+            "available": int(row[4]) if row[4].isdigit() else 0,
+            "price": int(row[5]) if row[5].isdigit() else 0
+        })
+
+    return stock_items
+
 def show_all_stock(bot, message):
     """Генерує PDF-файл зі списком товарів і надсилає користувачу."""
-    # Надсилаємо повідомлення про очікування
     wait_message = bot.send_message(message.chat.id, "⏳ Зачекайте, документ формується...")
 
-    items = get_all_stock()
+    try:
+        items = get_all_stock()
+        now = datetime.now(kyiv_tz).strftime("%Y-%m-%d_%H-%M")
 
-    # Отримуємо поточний час у Києві
-    now = datetime.now(kyiv_tz).strftime("%Y-%m-%d_%H-%M")
+        filename = f"sklad_HD_{now}.pdf"
 
-    # Формуємо назву файлу
-    filename = f"sklad_HD_{now}.pdf"
+        pdf = FPDF()
+        pdf.add_font("DejaVu", "", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", uni=True)
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.add_page()
+        pdf.set_font("DejaVu", "", 12)
 
-    # Створюємо PDF-документ
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
+        pdf.cell(200, 10, f"Наявність товарів на складі (станом на {now})", ln=True, align="C")
+        pdf.ln(10)
 
-    # Використовуємо стандартний шрифт
-    pdf.set_font("Helvetica", style="B", size=16)
-
-    # Заголовок (без емодзі)
-    pdf.cell(200, 10, f"Наявність товарів на складі (станом на {now})", ln=True, align="C")
-    pdf.ln(10)
-
-    # Створюємо таблицю
-    pdf.set_font("Helvetica", size=10)
-    pdf.cell(20, 8, "ID", border=1, align="C")
-    pdf.cell(50, 8, "Курс", border=1, align="C")
-    pdf.cell(50, 8, "Товар", border=1, align="C")
-    pdf.cell(20, 8, "На складі", border=1, align="C")
-    pdf.cell(20, 8, "Доступно", border=1, align="C")
-    pdf.cell(20, 8, "Ціна", border=1, align="C")
-    pdf.ln()
-
-    # Додаємо дані в таблицю
-    for item in items:
-        pdf.cell(20, 8, str(item["id"]), border=1, align="C")
-        pdf.cell(50, 8, item["course"], border=1, align="L")
-        pdf.cell(50, 8, item["name"], border=1, align="L")
-        pdf.cell(20, 8, str(item["stock"]), border=1, align="C")
-        pdf.cell(20, 8, str(item["available"]), border=1, align="C")
-        pdf.cell(20, 8, f"{item['price']}₴", border=1, align="C")
+        pdf.set_font("DejaVu", "", 10)
+        pdf.cell(20, 8, "ID", border=1, align="C")
+        pdf.cell(50, 8, "Курс", border=1, align="C")
+        pdf.cell(50, 8, "Товар", border=1, align="C")
+        pdf.cell(20, 8, "На складі", border=1, align="C")
+        pdf.cell(20, 8, "Доступно", border=1, align="C")
+        pdf.cell(20, 8, "Ціна", border=1, align="C")
         pdf.ln()
 
-    # Зберігаємо PDF
-    pdf.output(filename, "F")
+        for item in items:
+            pdf.cell(20, 8, str(item["id"]), border=1, align="C")
+            pdf.cell(50, 8, item["course"], border=1, align="L")
+            pdf.cell(50, 8, item["name"], border=1, align="L")
+            pdf.cell(20, 8, str(item["stock"]), border=1, align="C")
+            pdf.cell(20, 8, str(item["available"]), border=1, align="C")
+            pdf.cell(20, 8, f"{item['price']}₴", border=1, align="C")
+            pdf.ln()
 
-    # Видаляємо повідомлення "Зачекайте..."
-    bot.delete_message(chat_id=message.chat.id, message_id=wait_message.message_id)
+        pdf.output(filename, "F")
 
-    # Відправляємо файл користувачу
-    with open(filename, "rb") as file:
-        bot.send_document(message.chat.id, file, caption="📄 Ось список наявних товарів на складі.")
+        bot.delete_message(chat_id=message.chat.id, message_id=wait_message.message_id)
 
-    # Видаляємо тимчасовий файл
-    os.remove(filename)
+        with open(filename, "rb") as file:
+            bot.send_document(message.chat.id, file, caption="📄 Ось список наявних товарів на складі.")
+
+        os.remove(filename)
+
+    except Exception as e:
+        bot.edit_message_text("❌ Помилка при створенні документа!", chat_id=message.chat.id, message_id=wait_message.message_id)
+        print(f"❌ ПОМИЛКА: {e}")
