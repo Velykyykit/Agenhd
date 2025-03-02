@@ -3,6 +3,10 @@ from menu.keyboards import get_restart_keyboard
 import gspread
 import os
 
+# Завантаження облікових даних
+CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
+gc = gspread.service_account(filename=CREDENTIALS_PATH)
+
 def get_sklad_menu():
     """Меню складу."""
     markup = InlineKeyboardMarkup()
@@ -17,7 +21,6 @@ def handle_sklad(bot, message):
 
 def get_all_stock():
     """Отримує всі товари зі складу."""
-    gc = gspread.service_account(filename="credentials.json")
     sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
     worksheet = sh.worksheet("SKLAD")
 
@@ -49,7 +52,6 @@ def show_all_stock(bot, message):
 
 def show_courses_for_order(bot, message):
     """Показує список курсів для замовлення."""
-    gc = gspread.service_account(filename="credentials.json")
     sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
     worksheet = sh.worksheet("dictionary")
 
