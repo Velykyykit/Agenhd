@@ -61,7 +61,7 @@ def show_all_stock(bot, message):
         pdf.set_font("Helvetica", "", 12)  # Використання стандартного шрифту
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
-        pdf.set_font("DejaVu", "", 12)
+        pdf.set_font("Helvetica", "", 10)  # Використання стандартного шрифту
 
         pdf.cell(200, 10, f"Наявність товарів на складі (станом на {now})", ln=True, align="C")
         pdf.ln(10)
