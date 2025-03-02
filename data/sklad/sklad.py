@@ -1,10 +1,13 @@
 from fpdf import FPDF
 import os
 import gspread
-import pytz
-from datetime import datetime
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from menu.keyboards import get_restart_keyboard
+from datetime import datetime
+import pytz
+
+# Отримуємо часовий пояс Києва
+kyiv_tz = pytz.timezone("Europe/Kiev")
 
 def get_sklad_menu():
     """Меню складу."""
@@ -12,6 +15,11 @@ def get_sklad_menu():
     markup.add(InlineKeyboardButton("🛒 Зробити Замовлення", callback_data="order"))
     markup.add(InlineKeyboardButton("📊 Перевірити Наявність", callback_data="check_stock"))
     return markup
+
+def handle_sklad(bot, message):
+    """Функція для обробки складу."""
+    bot.send_message(message.chat.id, "📦 Ви у розділі складу. Оберіть дію:", reply_markup=get_sklad_menu())
+    bot.send_message(message.chat.id, "🔄 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=get_restart_keyboard())
 
 def get_all_stock():
     """Отримує всі товари зі складу."""
@@ -35,22 +43,25 @@ def get_all_stock():
 
     return stock_items
 
-def generate_pdf(filename, items, title):
-    """Генерує PDF-файл зі списком товарів."""
-    # Отримуємо поточний час у Києві
-    kyiv_tz = pytz.timezone("Europe/Kiev")
-    now = datetime.now(kyiv_tz).strftime("%d.%m.%Y %H:%M")
+def show_all_stock(bot, message):
+    """Генерує PDF-файл зі списком товарів і надсилає користувачу."""
+    items = get_all_stock()
 
+    # Отримуємо поточний час у Києві
+    now = datetime.now(kyiv_tz).strftime("%Y-%m-%d_%H-%M")
+
+    # Формуємо назву файлу
+    filename = f"sklad_HD_{now}.pdf"
+
+    # Створюємо PDF-документ
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
-    
-    # Використовуємо стандартний шрифт без емодзі
+    pdf.set_font("Arial", style="", size=12)
+
+    # Заголовок
     pdf.set_font("Arial", style="B", size=16)
-    pdf.cell(200, 10, f"{title}", ln=True, align="C")
-    pdf.ln(5)
-    pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, f"Дата та час (Україна): {now}", ln=True, align="C")
+    pdf.cell(200, 10, f"📦 Наявність товарів на складі (станом на {now})", ln=True, align="C")
     pdf.ln(10)
 
     # Створюємо таблицю
@@ -73,28 +84,28 @@ def generate_pdf(filename, items, title):
         pdf.cell(20, 8, f"{item['price']}₴", border=1, align="C")
         pdf.ln()
 
+    # Зберігаємо PDF
     pdf.output(filename)
 
-def show_all_stock(bot, message):
-    """Створює 2 PDF-файли та надсилає користувачу."""
-    items = get_all_stock()
+    # Відправляємо файл користувачу
+    with open(filename, "rb") as file:
+        bot.send_document(message.chat.id, file, caption="📄 Ось список наявних товарів на складі.")
 
-    # Файл 1: Усі товари на складі
-    filename_all = f"stock_all_{message.chat.id}.pdf"
-    generate_pdf(filename_all, items, "Повний список товарів на складі")
+    # Видаляємо тимчасовий файл
+    os.remove(filename)
 
-    # Файл 2: Товари, які можна замовити (доступно > 0)
-    available_items = [item for item in items if item["available"] > 0]
-    filename_available = f"stock_available_{message.chat.id}.pdf"
-    generate_pdf(filename_available, available_items, "Список доступних товарів")
+def show_courses_for_order(bot, message):
+    """Показує список курсів для замовлення."""
+    CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
+    gc = gspread.service_account(filename=CREDENTIALS_PATH)
+    
+    sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
+    worksheet = sh.worksheet("dictionary")  # Вказати назву аркуша з курсами
 
-    # Відправляємо файли
-    with open(filename_all, "rb") as file:
-        bot.send_document(message.chat.id, file, caption="📄 Повний список товарів на складі.")
+    courses = worksheet.col_values(1)  # Отримати всі назви курсів
+    markup = InlineKeyboardMarkup()
 
-    with open(filename_available, "rb") as file:
-        bot.send_document(message.chat.id, file, caption="📄 Список доступних товарів.")
+    for course in courses:
+        markup.add(InlineKeyboardButton(course, callback_data=f"course_{course}"))
 
-    # Видаляємо тимчасові файли
-    os.remove(filename_all)
-    os.remove(filename_available)
+    bot.send_message(message.chat.id, "📚 Оберіть курс для замовлення:", reply_markup=markup)
