@@ -27,14 +27,9 @@ async def on_course_selected(
     manager: DialogManager,
     item_id: str
 ):
-    """
-    Викликається при виборі курсу.
-    item_id – це обраний курс (бо item_id_getter=lambda x: x у вікні вибору курсу).
-    """
+    """Обробка вибору курсу."""
     manager.dialog_data["course"] = item_id
-    # Переходимо до стану select_item
     await manager.switch_to(OrderSG.select_item)
-
 
 async def on_item_selected(
     call: types.CallbackQuery,
@@ -42,15 +37,10 @@ async def on_item_selected(
     manager: DialogManager,
     item_id: str
 ):
-    """
-    Викликається при виборі конкретного товару.
-    item_id – це item["id"] (бо item_id_getter=lambda item: item["id"]).
-    """
-    # Зберігаємо товар у dialog_data
+    """Обробка вибору товару."""
     all_items = await get_all_stock()
     item = next((i for i in all_items if i["id"] == item_id), None)
     manager.dialog_data["item"] = item
-    # Переходимо до стану input_quantity
     await manager.switch_to(OrderSG.input_quantity)
 
 select_course_window = Window(
@@ -59,8 +49,8 @@ select_course_window = Window(
         Format("{item}"),
         id="course_select",
         items="courses",
-        item_id_getter=lambda x: x,  
-        on_click=on_course_selected,  # Викликаємо нашу функцію
+        item_id_getter=lambda x: x,
+        on_click=on_course_selected,
     ),
     state=OrderSG.select_course,
     getter=get_courses,
@@ -73,7 +63,7 @@ select_item_window = Window(
         id="item_select",
         items="items",
         item_id_getter=lambda item: item["id"],
-        on_click=on_item_selected,  # Викликаємо нашу функцію
+        on_click=on_item_selected,
     ),
     state=OrderSG.select_item,
     getter=get_items,
@@ -112,7 +102,7 @@ async def on_confirm_order(
         "Натисніть 'Підтвердити замовлення' для збереження."
     )
     await call.message.answer(order_text, parse_mode="HTML")
-    # Тут можна викликати add_order(...)  
+    # Тут можна викликати add_order(...)
     await manager.done()
 
 confirm_order_window = Window(
