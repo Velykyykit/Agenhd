@@ -1,7 +1,7 @@
 import asyncio
 import logging
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.types import (ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove)
 from config.auth import AuthManager
 from data.sklad.sklad import handle_sklad, show_all_stock, show_courses_for_order
 from menu.keyboards import get_phone_keyboard, get_restart_keyboard
@@ -34,12 +34,12 @@ def get_main_menu():
     return markup
 
 # Обробник команди /start
-@dp.message(commands=['start'])
+@dp.message(F.text == "/start")
 async def send_welcome(message: types.Message):
     await message.answer("📲 Поділіться номером для аутентифікації:", reply_markup=await get_phone_keyboard())
 
 # Обробка контактних даних
-@dp.message(content_types=types.ContentType.CONTACT)
+@dp.message(F.contact)
 async def handle_contact(message: types.Message):
     phone_number = message.contact.phone_number
     phone_number = auth_manager.clean_phone_number(phone_number)
@@ -65,7 +65,7 @@ async def handle_contact(message: types.Message):
         logging.error(f"❌ ПОМИЛКА: {e}")
 
 # Обробник вибору меню
-@dp.callback_query(lambda call: call.data in ["sklad", "tasks", "forme"])
+@dp.callback_query(F.data.in_(["sklad", "tasks", "forme"]))
 async def handle_main_menu(call: types.CallbackQuery):
     if call.data == "sklad":
         await handle_sklad(bot, call.message)
@@ -75,17 +75,17 @@ async def handle_main_menu(call: types.CallbackQuery):
         await call.message.answer("🙋‍♂️ Розділ 'Для мене' ще в розробці.")
 
 # Обробник перевірки складу
-@dp.callback_query(lambda call: call.data == "check_stock")
+@dp.callback_query(F.data == "check_stock")
 async def handle_stock_check(call: types.CallbackQuery):
     await show_all_stock(bot, call.message)
 
 # Обробник оформлення замовлення
-@dp.callback_query(lambda call: call.data == "order")
+@dp.callback_query(F.data == "order")
 async def handle_order(call: types.CallbackQuery):
     await show_courses_for_order(bot, call.message)
 
 # Обробник кнопки "🔄 Почати спочатку"
-@dp.message(lambda message: message.text == "🔄 Почати спочатку")
+@dp.message(F.text == "🔄 Почати спочатку")
 async def restart_bot(message: types.Message):
     await message.answer("📌 Оберіть розділ:", reply_markup=get_main_menu())
 
