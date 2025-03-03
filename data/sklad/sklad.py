@@ -4,7 +4,7 @@ import asyncio
 from fpdf import FPDF
 from datetime import datetime
 import pytz
-from aiogram import Bot, types, Router
+from aiogram import types, Router
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
 from menu.keyboards import get_restart_keyboard
 
