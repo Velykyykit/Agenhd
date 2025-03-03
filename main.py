@@ -1,32 +1,32 @@
 import asyncio
 import logging
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
+from aiogram.types import (ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, 
+                           InlineKeyboardButton, ReplyKeyboardRemove)
 from aiogram.utils import executor
-from config.settings import TOKEN
 from config.auth import AuthManager
 from data.sklad.sklad import handle_sklad, show_all_stock, show_courses_for_order
+from menu.keyboards import get_phone_keyboard, get_restart_keyboard
+import os
 
 # Налаштування логування
 logging.basicConfig(level=logging.INFO)
+
+# Отримуємо змінні середовища
+TOKEN = os.getenv("TOKEN")
+SHEET_ID = os.getenv("SHEET_ID")
+SHEET_SKLAD = os.getenv("SHEET_SKLAD")
+CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
+
+if not TOKEN or not SHEET_ID or not SHEET_SKLAD or not CREDENTIALS_FILE:
+    raise ValueError("❌ Не знайдено змінні середовища! Перевірте Railway.")
 
 # Ініціалізація бота та диспетчера
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
 
 # Менеджер аутентифікації
-auth_manager = AuthManager()
-
-# Функції клавіатур
-def get_phone_keyboard():
-    keyboard = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-    keyboard.add(KeyboardButton("📲 Поділитися номером", request_contact=True))
-    return keyboard
-
-def get_restart_keyboard():
-    keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add(KeyboardButton("🔄 Почати спочатку"))
-    return keyboard
+auth_manager = AuthManager(SHEET_ID, CREDENTIALS_FILE)
 
 def get_main_menu():
     markup = InlineKeyboardMarkup()
@@ -56,7 +56,7 @@ async def handle_contact(message: types.Message):
             await message.answer(
                 f"✅ Вітаю, *{user_data['name']}*! Ви успішно ідентифіковані. 🎉",
                 parse_mode="Markdown",
-                reply_markup=ReplyKeyboardRemove()  # Прибираємо клавіатуру після авторизації
+                reply_markup=ReplyKeyboardRemove()
             )
             await message.answer("📌 Оберіть розділ:", reply_markup=get_main_menu())
         else:
