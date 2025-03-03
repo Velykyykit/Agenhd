@@ -56,7 +56,7 @@ async def handle_contact(message: types.Message):
     logging.info(f"[DEBUG] Отримано номер: {phone_number}")
 
     try:
-        user_data = await asyncio.to_thread(auth_manager.check_user_in_database, phone_number)
+        user_data = await auth_manager.check_user_in_database(phone_number)
         logging.info(f"[DEBUG] Відповідь від auth.py: {user_data}")
 
         if user_data:
