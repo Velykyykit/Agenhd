@@ -56,6 +56,13 @@ async def on_item_selected(call: types.CallbackQuery, widget, manager: DialogMan
 async def on_next_quantity(call: types.CallbackQuery, widget, manager: DialogManager):
     await manager.switch_to(OrderSG.confirm_order)
 
+# Колбек, що викликається, коли користувач успішно ввів кількість
+async def handle_quantity_input(message: types.Message, widget, manager: DialogManager, text: str):
+    """
+    Зберігає введену кількість в manager.dialog_data["quantity"].
+    """
+    manager.dialog_data["quantity"] = text
+
 # Крок підтвердження замовлення (натискання кнопки «Підтвердити замовлення»)
 async def on_confirm_order(call: types.CallbackQuery, widget, manager: DialogManager):
     data = manager.dialog_data
@@ -82,8 +89,8 @@ select_course_window = Window(
             item_id_getter=lambda x: x,
             on_click=on_course_selected,
         ),
-        width=1,   # одна кнопка в рядку
-        height=10, # 10 кнопок за раз
+        width=1,
+        height=10,
         id="scroll_courses"
     ),
     state=OrderSG.select_course,
@@ -114,7 +121,8 @@ input_quantity_window = Window(
     Const("Введіть кількість замовлення для обраного товару:"),
     TextInput(
         id="quantity_input",
-        on_success=lambda c, w, m, text: m.dialog_data.update({"quantity": text}),
+        # Використовуємо асинхронну функцію handle_quantity_input
+        on_success=handle_quantity_input,
     ),
     Button(Const("Далі"), id="next_button", on_click=on_next_quantity),
     state=OrderSG.input_quantity,
@@ -128,7 +136,6 @@ confirm_order_window = Window(
     state=OrderSG.confirm_order,
 )
 
-# Об'єднуємо всі 4 вікна в діалог
 order_dialog = Dialog(
     select_course_window,
     select_item_window,
