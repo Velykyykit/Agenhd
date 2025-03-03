@@ -8,6 +8,7 @@ from aiogram_dialog.widgets.text import Const, Format
 from aiogram_dialog.widgets.input import TextInput
 from aiogram.fsm.state import StatesGroup, State
 from aiogram import types
+from aiogram_dialog.widgets.kbd import ScrollingGroup
 
 from data.sklad.sklad import get_all_stock
 
@@ -94,13 +95,17 @@ async def on_confirm_order(
 
 select_course_window = Window(
     Const("Оберіть курс для замовлення:"),
-    Select(
-        Format("{item}"),
-        id="course_select",
-        items="courses",
-        item_id_getter=lambda x: x,
-        on_click=on_course_selected,
-        columns=1,  # <--- Одна кнопка на рядок
+    ScrollingGroup(
+        Select(
+            Format("{item}"),
+            id="course_select",
+            items="courses",
+            item_id_getter=lambda x: x,
+            on_click=on_course_selected,
+        ),
+        width=1,  # ← одна кнопка в рядку
+        height=10,  # скільки рядків (кнопок) за раз
+        id="scroll_courses"  # унікальний id ScrollingGroup
     ),
     state=OrderSG.select_course,
     getter=get_courses,
