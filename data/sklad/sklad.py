@@ -15,14 +15,14 @@ FONT_PATH = os.path.join("/app/config/fonts", "DejaVuSans.ttf")
 
 async def get_sklad_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🛒 Зробити Замовлення", callback_data="order")],
-        [InlineKeyboardButton(text="📊 Перевірити Наявність", callback_data="check_stock")]
+        [InlineKeyboardButton(text="🍔 Зробити Замовлення", callback_data="order")],
+        [InlineKeyboardButton(text="📈 Перевірити Наявність", callback_data="check_stock")]
     ])
 
-async def handle_sklad(message):
-    await message.answer("📦 Ви у розділі складу. Оберіть дію:", reply_markup=await get_sklad_menu())
+async def handle_sklad(bot, message):
+    await message.answer("\ud83d\udce6 Ви у розділі складу. Оберіть дію:", reply_markup=await get_sklad_menu())
     keyboard = await get_restart_keyboard()
-    await message.answer("🔄 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=keyboard)
+    await message.answer("\ud83d\udd04 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=keyboard)
 
 async def get_all_stock():
     gc = gspread.service_account(filename=CREDENTIALS_PATH)
@@ -30,16 +30,23 @@ async def get_all_stock():
     worksheet = sh.worksheet("SKLAD")
 
     data = await asyncio.to_thread(worksheet.get_all_values)
-    stock_items = [dict(zip(data[0], row)) for row in data[1:]]
+    stock_items = [{
+        "id": row[0],
+        "course": row[1],
+        "name": row[2],
+        "stock": int(row[3]) if row[3].isdigit() else 0,
+        "available": int(row[4]) if row[4].isdigit() else 0,
+        "price": int(row[5]) if row[5].isdigit() else 0
+    } for row in data[1:]]
 
     return stock_items
 
-async def show_all_stock(message):
-    wait_message = await message.answer("⏳ Зачекайте, документ формується...")
+async def show_all_stock(bot, message):
+    wait_message = await message.answer("\u231b Зачекайте, документ формується...")
 
     try:
         if not os.path.exists(FONT_PATH):
-            await message.answer("❌ Помилка: Файл шрифту DejaVuSans.ttf не знайдено!")
+            await message.answer("\u274c Помилка: Файл шрифту DejaVuSans.ttf не знайдено!")
             return
 
         items = await get_all_stock()
@@ -61,20 +68,21 @@ async def show_all_stock(message):
         pdf.ln()
 
         for item in items:
-            pdf.cell(30, 8, item["id"], border=1, align="C")
+            pdf.cell(30, 8, str(item["id"]), border=1, align="C")
             pdf.cell(80, 8, item["name"], border=1, align="L")
-            pdf.cell(30, 8, item["stock"], border=1, align="C")
+            pdf.cell(30, 8, str(item["stock"]), border=1, align="C")
             pdf.cell(30, 8, f"{item['price']}₴", border=1, align="C")
             pdf.ln()
 
         pdf.output(filename)
 
-        await message.delete()
+        await bot.delete_message(chat_id=message.chat.id, message_id=wait_message.message_id)
+
         file = FSInputFile(filename)
-        await message.answer_document(file, caption="📄 Ось список наявних товарів на складі.")
+        await bot.send_document(message.chat.id, file, caption="📄 Ось список наявних товарів на складі.")
 
         os.remove(filename)
 
     except Exception as e:
-        await message.answer("❌ Помилка при створенні документа!")
-        print(f"❌ ПОМИЛКА: {e}")
+        await message.answer("\u274c Помилка при створенні документа!")
+        print(f"\u274c ПОМИЛКА: {e}")
