@@ -30,14 +30,7 @@ async def get_all_stock():
     worksheet = sh.worksheet("SKLAD")
 
     data = await asyncio.to_thread(worksheet.get_all_values)
-    stock_items = [{
-        "id": row[0],
-        "course": row[1],
-        "name": row[2],
-        "stock": int(row[3]) if row[3].isdigit() else 0,
-        "available": int(row[4]) if row[4].isdigit() else 0,
-        "price": int(row[5]) if row[5].isdigit() else 0
-    } for row in data[1:]]
+    stock_items = [dict(zip(data[0], row)) for row in data[1:]]
 
     return stock_items
 
@@ -77,28 +70,10 @@ async def show_all_stock(bot, message):
         pdf.output(filename)
 
         await bot.delete_message(chat_id=message.chat.id, message_id=wait_message.message_id)
-
         file = FSInputFile(filename)
         await bot.send_document(message.chat.id, file, caption="📄 Ось список наявних товарів на складі.")
-
         os.remove(filename)
 
     except Exception as e:
         await message.answer("❌ Помилка при створенні документа!")
         print(f"❌ ПОМИЛКА: {e}")
-
-async def show_courses_for_order(bot, message):
-    gc = gspread.service_account(filename=CREDENTIALS_PATH)
-    sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
-    worksheet = sh.worksheet("dictionary")
-
-    courses = await asyncio.to_thread(worksheet.col_values, 1)
-    if not courses:
-        await message.answer("❌ Немає доступних курсів для замовлення.")
-        return
-
-    markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=course, callback_data=f"course_{course}")] for course in courses
-    ])
-
-    await message.answer("📚 Оберіть курс для замовлення:", reply_markup=markup)
