@@ -1,42 +1,70 @@
-import asyncio
-from typing import Any, Dict
-
 from aiogram_dialog import Dialog, Window, DialogManager
 from aiogram_dialog.widgets.kbd import Select, Button, Cancel
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram_dialog.widgets.input import TextInput
+from aiogram.fsm.state import StatesGroup, State
 
-from data.sklad.states import OrderSG
 from data.sklad.sklad import get_all_stock
 
-async def get_courses(**kwargs) -> Dict[str, Any]:
-    """Зчитуємо назви курсів (аркуш 'dictionary'). 
-       Тут для прикладу статичний список."""
+class OrderSG(StatesGroup):
+    select_course = State()
+    select_item = State()
+    input_quantity = State()
+    confirm_order = State()
+
+async def get_courses(**kwargs):
     return {"courses": ["Alphabet", "Baby's Best Start", "Dragon's Fire"]}
 
-async def get_items(dialog_manager: DialogManager, **kwargs) -> Dict[str, Any]:
-    """Зчитуємо товари (аркуш 'SKLAD'), фільтруємо за обраним курсом."""
+async def get_items(dialog_manager: DialogManager, **kwargs):
     course = dialog_manager.dialog_data.get("course")
     all_items = await get_all_stock()
-    filtered = [item for item in all_items if item["course"] == course]
-    return {"items": filtered}
+    return {"items": [item for item in all_items if item["course"] == course]}
 
-# Вікно 1: Вибір курсу
+async def on_course_selected(
+    call: types.CallbackQuery,
+    widget,
+    manager: DialogManager,
+    item_id: str
+):
+    """
+    Викликається при виборі курсу.
+    item_id – це обраний курс (бо item_id_getter=lambda x: x у вікні вибору курсу).
+    """
+    manager.dialog_data["course"] = item_id
+    # Переходимо до стану select_item
+    await manager.switch_to(OrderSG.select_item)
+
+
+async def on_item_selected(
+    call: types.CallbackQuery,
+    widget,
+    manager: DialogManager,
+    item_id: str
+):
+    """
+    Викликається при виборі конкретного товару.
+    item_id – це item["id"] (бо item_id_getter=lambda item: item["id"]).
+    """
+    # Зберігаємо товар у dialog_data
+    all_items = await get_all_stock()
+    item = next((i for i in all_items if i["id"] == item_id), None)
+    manager.dialog_data["item"] = item
+    # Переходимо до стану input_quantity
+    await manager.switch_to(OrderSG.input_quantity)
+
 select_course_window = Window(
     Const("Оберіть курс для замовлення:"),
     Select(
         Format("{item}"),
         id="course_select",
         items="courses",
-        # Додаємо item_id_getter, щоб уникнути помилки Missing argument
-        item_id_getter=lambda x: x, 
-        on_click=lambda c, w, m, d: m.dialog().switch_to(OrderSG.select_item, data={"course": c.data}),
+        item_id_getter=lambda x: x,  
+        on_click=on_course_selected,  # Викликаємо нашу функцію
     ),
     state=OrderSG.select_course,
     getter=get_courses,
 )
 
-# Вікно 2: Вибір товару
 select_item_window = Window(
     Format("Курс: {dialog_data[course]}\n\nОберіть товар:\n"),
     Select(
@@ -44,33 +72,36 @@ select_item_window = Window(
         id="item_select",
         items="items",
         item_id_getter=lambda item: item["id"],
-        on_click=lambda c, w, m, d: m.dialog().switch_to(OrderSG.input_quantity, data={"item": c.data}),
+        on_click=on_item_selected,  # Викликаємо нашу функцію
     ),
     state=OrderSG.select_item,
     getter=get_items,
 )
 
-# Вікно 3: Введення кількості
+async def on_next_quantity(
+    call: types.CallbackQuery,
+    widget,
+    manager: DialogManager,
+):
+    """Натискання кнопки «Далі» після введення кількості."""
+    await manager.switch_to(OrderSG.confirm_order)
+
 input_quantity_window = Window(
     Const("Введіть кількість замовлення для обраного товару:"),
     TextInput(
         id="quantity_input",
-        on_success=lambda c, w, m, d: m.dialog().update_data({"quantity": d}),
+        on_success=lambda c, w, m, txt: m.dialog_data.update({"quantity": txt}),
     ),
-    Button(
-        Const("Далі"),
-        id="next_button",
-        on_click=lambda c, w, m, d: m.dialog().switch_to(OrderSG.confirm_order)
-    ),
+    Button(Const("Далі"), id="next_button", on_click=on_next_quantity),
     state=OrderSG.input_quantity,
 )
 
-async def on_confirm_order(c, w, m, data: Dict[str, Any]):
-    """
-    Підтвердження замовлення:
-    Відображаємо підсумок (курс, товар, кількість, ціна).
-    Далі можна зберегти замовлення і закрити діалог.
-    """
+async def on_confirm_order(
+    call: types.CallbackQuery,
+    widget,
+    manager: DialogManager,
+):
+    data = manager.dialog_data
     order_text = (
         f"Підтвердження замовлення:\n"
         f"Курс: {data.get('course')}\n"
@@ -79,11 +110,10 @@ async def on_confirm_order(c, w, m, data: Dict[str, Any]):
         f"Ціна за одиницю: {data.get('item')['price']}₴\n\n"
         "Натисніть 'Підтвердити замовлення' для збереження."
     )
-    await m.answer(order_text, parse_mode="HTML")
-    # Тут можна викликати add_order(...) і зберегти замовлення
-    await m.dialog().done()
+    await call.message.answer(order_text, parse_mode="HTML")
+    # Тут можна викликати add_order(...)  
+    await manager.done()
 
-# Вікно 4: Підтвердження замовлення
 confirm_order_window = Window(
     Const("Підтвердіть ваше замовлення."),
     Button(Const("Підтвердити замовлення"), id="confirm_order", on_click=on_confirm_order),
