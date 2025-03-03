@@ -28,6 +28,8 @@ select_course_window = Window(
         Format("{item}"),
         id="course_select",
         items="courses",
+        # Додаємо item_id_getter, щоб уникнути помилки Missing argument
+        item_id_getter=lambda x: x, 
         on_click=lambda c, w, m, d: m.dialog().switch_to(OrderSG.select_item, data={"course": c.data}),
     ),
     state=OrderSG.select_course,
@@ -55,7 +57,11 @@ input_quantity_window = Window(
         id="quantity_input",
         on_success=lambda c, w, m, d: m.dialog().update_data({"quantity": d}),
     ),
-    Button(Const("Далі"), id="next_button", on_click=lambda c, w, m, d: m.dialog().switch_to(OrderSG.confirm_order)),
+    Button(
+        Const("Далі"),
+        id="next_button",
+        on_click=lambda c, w, m, d: m.dialog().switch_to(OrderSG.confirm_order)
+    ),
     state=OrderSG.input_quantity,
 )
 
