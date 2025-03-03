@@ -4,7 +4,7 @@ import asyncio
 from fpdf import FPDF
 from datetime import datetime
 import pytz
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, CallbackQuery
 from menu.keyboards import get_restart_keyboard
 
 # Налаштовуємо часовий пояс для Києва
@@ -41,12 +41,13 @@ async def get_all_stock():
 
     return stock_items
 
-async def show_all_stock(message):
-    wait_message = await message.answer("⏳ Зачекайте, документ формується...")
+async def show_all_stock(call: CallbackQuery):
+    await call.answer()
+    wait_message = await call.message.answer("⏳ Зачекайте, документ формується...")
 
     try:
         if not os.path.exists(FONT_PATH):
-            await message.answer("❌ Помилка: Файл шрифту DejaVuSans.ttf не знайдено!")
+            await call.message.answer("❌ Помилка: Файл шрифту DejaVuSans.ttf не знайдено!")
             return
 
         items = await get_all_stock()
@@ -76,13 +77,13 @@ async def show_all_stock(message):
 
         pdf.output(filename)
 
-        await message.bot.delete_message(chat_id=message.chat.id, message_id=wait_message.message_id)
+        await call.message.bot.delete_message(chat_id=call.message.chat.id, message_id=wait_message.message_id)
 
         file = FSInputFile(filename)
-        await message.answer_document(file, caption="📄 Ось список наявних товарів на складі.")
+        await call.message.answer_document(file, caption="📄 Ось список наявних товарів на складі.")
 
         os.remove(filename)
 
     except Exception as e:
-        await message.answer("❌ Помилка при створенні документа!")
+        await call.message.answer("❌ Помилка при створенні документа!")
         print(f"❌ ПОМИЛКА: {e}")
