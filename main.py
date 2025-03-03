@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+
 from aiogram import Bot, Dispatcher, types, Router, F
 from aiogram.types import (
     ReplyKeyboardRemove, 
@@ -9,25 +10,24 @@ from aiogram.types import (
 )
 from aiogram.fsm.storage.memory import MemoryStorage
 
-# Імпорт керування аутентифікацією
+# Аутентифікація (ваш модуль)
 from config.auth import AuthManager
 
-# Логіка складу (перевірка наявності, перехід до замовлень)
+# Логіка складу
 from data.sklad.sklad import handle_sklad, show_all_stock
 
 # Клавіатури
 from menu.keyboards import get_phone_keyboard, get_restart_keyboard
 
-# Обробники замовлень через aiogram-dialog
+# aiogram-dialog
 from aiogram_dialog.registry import DialogRegistry, StartMode
-from data.sklad.order_dialog import order_dialog, OrderSG
+from data.sklad.order import order_dialog, OrderSG   # наш діалог з order.py
 
-# Обробник перегляду замовлень ("Для мене")
+# Перегляд замовлень («Для мене»)
 from data.For_me.me import show_my_orders
 
 logging.basicConfig(level=logging.INFO)
 
-# Отримання змінних середовища
 TOKEN = os.getenv("TOKEN")
 SHEET_ID = os.getenv("SHEET_ID")
 SHEET_SKLAD = os.getenv("SHEET_SKLAD")
@@ -35,14 +35,12 @@ CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
 if not TOKEN or not SHEET_ID or not SHEET_SKLAD or not CREDENTIALS_FILE:
     raise ValueError("❌ Не знайдено змінні середовища!")
 
-# Ініціалізація бота, диспетчера та FSM-сховища
 bot = Bot(token=TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 router = Router()
 dp.include_router(router)
 
-# Менеджер аутентифікації
 auth_manager = AuthManager(SHEET_ID, CREDENTIALS_FILE)
 
 def get_main_menu():
@@ -69,13 +67,14 @@ async def handle_contact(message: types.Message):
     """
     if message.contact.user_id != message.from_user.id:
         await message.answer(
-            "❌ Будь ласка, скористайтеся кнопкою '📲 Поділитися номером' "
+            "❌ Скористайтеся кнопкою '📲 Поділитися номером' "
             "для відправки саме вашого номера телефону."
         )
         return
 
     phone_number = auth_manager.clean_phone_number(message.contact.phone_number)
     logging.info(f"[DEBUG] Отримано номер: {phone_number}")
+
     try:
         user_data = await auth_manager.check_user_in_database(phone_number)
         logging.info(f"[DEBUG] Відповідь від auth.py: {user_data}")
@@ -91,9 +90,7 @@ async def handle_contact(message: types.Message):
                 reply_markup=await get_restart_keyboard()
             )
         else:
-            await message.answer(
-                "❌ Ваш номер не знайдено у базі. Зверніться до адміністратора."
-            )
+            await message.answer("❌ Ваш номер не знайдено у базі. Зверніться до адміністратора.")
     except Exception as e:
         await message.answer("❌ Сталася помилка під час перевірки номера. Спробуйте пізніше.")
         logging.error(f"❌ ПОМИЛКА: {e}")
@@ -138,9 +135,9 @@ registry.register(order_dialog)
 
 @router.callback_query(F.data == "order")
 async def start_order_dialog(call: types.CallbackQuery, dialog_manager: DialogRegistry):
+    """Запуск діалогу для оформлення замовлення."""
     await call.answer()
-    # Запускаємо діалог із першим станом (OrderSG.select_course)
-    await dialog_manager.start(OrderSG.select_course, mode=StartMode.NORMAL)
+    await dialog_manager.start(OrderSG.select_course, mode=StartMode.RESET_STACK)
 
 async def main():
     """Запуск бота в режимі polling."""
