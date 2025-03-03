@@ -21,7 +21,8 @@ async def get_sklad_menu():
 
 async def handle_sklad(bot, message):
     await message.answer("📦 Ви у розділі складу. Оберіть дію:", reply_markup=await get_sklad_menu())
-    await message.answer("🔄 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=await get_restart_keyboard())
+    keyboard = await get_restart_keyboard()
+    await message.answer("🔄 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=keyboard)
 
 async def get_all_stock():
     gc = gspread.service_account(filename=CREDENTIALS_PATH)
