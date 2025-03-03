@@ -7,7 +7,7 @@ from aiogram.types import (
     InlineKeyboardButton, ReplyKeyboardRemove
 )
 from config.auth import AuthManager
-from data.sklad.skald import handle_sklad, show_all_stock  # Переконайтесь, що ім'я файлу збігається
+from data.sklad.sklad import handle_sklad, show_all_stock  # Імпорт із файлу sklad.py
 from menu.keyboards import get_phone_keyboard, get_restart_keyboard
 
 # Налаштування логування
@@ -62,7 +62,7 @@ async def handle_contact(message: types.Message):
                 parse_mode="Markdown",
                 reply_markup=ReplyKeyboardRemove()
             )
-            # Відправляємо головне меню та клавіатуру для повернення
+            # Відправка головного меню
             await message.answer("📌 Оберіть розділ:", reply_markup=get_main_menu())
             await message.answer("🔄 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=await get_restart_keyboard())
         else:
