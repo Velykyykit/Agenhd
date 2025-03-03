@@ -3,6 +3,7 @@ from aiogram_dialog.widgets.kbd import Select, Button, Cancel
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram_dialog.widgets.input import TextInput
 from aiogram.fsm.state import StatesGroup, State
+from aiogram import types
 
 from data.sklad.sklad import get_all_stock
 
