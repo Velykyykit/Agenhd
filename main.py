@@ -1,20 +1,45 @@
 import asyncio
 import logging
+import os
 from aiogram import Bot, Dispatcher, types, F, Router
 from aiogram.types import (ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove)
 from config.auth import AuthManager
 from data.sklad.sklad import handle_sklad, show_all_stock, show_courses_for_order
 from menu.keyboards import get_phone_keyboard, get_restart_keyboard
-import os
 
 # Налаштування логування
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Отримуємо змінні середовища
 TOKEN = os.getenv("TOKEN")
 SHEET_ID = os.getenv("SHEET_ID")
 SHEET_SKLAD = os.getenv("SHEET_SKLAD")
 CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
+
+# Логування змінних середовища
+logger.info(f"🔍 Перевірка змінних середовища:")
+logger.info(f"✅ TOKEN: {'Знайдено' if TOKEN else '❌ НЕ ЗНАЙДЕНО'}")
+logger.info(f"✅ SHEET_ID: {SHEET_ID if SHEET_ID else '❌ НЕ ЗНАЙДЕНО'}")
+logger.info(f"✅ SHEET_SKLAD: {SHEET_SKLAD if SHEET_SKLAD else '❌ НЕ ЗНАЙДЕНО'}")
+logger.info(f"✅ CREDENTIALS_FILE: {CREDENTIALS_FILE if CREDENTIALS_FILE else '❌ НЕ ЗНАЙДЕНО'}")
+
+# Перевірка наявності критичних змінних
+missing_vars = []
+if not TOKEN:
+    missing_vars.append("TOKEN")
+if not SHEET_ID:
+    missing_vars.append("SHEET_ID")
+if not SHEET_SKLAD:
+    missing_vars.append("SHEET_SKLAD")
+if not CREDENTIALS_FILE:
+    missing_vars.append("CREDENTIALS_FILE")
+
+if missing_vars:
+    logger.error(f"❌ Відсутні критичні змінні середовища: {', '.join(missing_vars)}")
+    raise ValueError("⛔ Зупинка програми через відсутність критичних змінних середовища!")
+
+logger.info("✅ Всі необхідні змінні середовища знайдено. Продовжуємо роботу!")
 
 if not TOKEN or not SHEET_ID or not SHEET_SKLAD or not CREDENTIALS_FILE:
     raise ValueError("❌ Не знайдено змінні середовища! Перевірте Railway.")
