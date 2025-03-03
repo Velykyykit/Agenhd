@@ -21,7 +21,7 @@ async def get_sklad_menu():
 
 async def handle_sklad(bot, message):
     await message.answer("📦 Ви у розділі складу. Оберіть дію:", reply_markup=await get_sklad_menu())
-    await message.answer("🔄 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=get_restart_keyboard())
+    await message.answer("🔄 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=await get_restart_keyboard())
 
 async def get_all_stock():
     gc = gspread.service_account(filename=CREDENTIALS_PATH)
@@ -50,7 +50,7 @@ async def show_all_stock(bot, message):
 
         pdf = FPDF()
         pdf.add_page()
-        pdf.set_font("Arial", size=12)
+        pdf.set_font("Arial", '', 12)
 
         pdf.cell(200, 10, f"Наявність товарів на складі (станом на {now})", ln=True, align="C")
         pdf.ln(10)
