@@ -31,7 +31,6 @@ async def get_all_stock():
     gc = gspread.service_account(filename=CREDENTIALS_PATH)
     sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
     worksheet = sh.worksheet("SKLAD")
-
     data = await asyncio.to_thread(worksheet.get_all_values)
     stock_items = [{
         "id": row[0],
@@ -47,44 +46,35 @@ async def show_all_stock(call: CallbackQuery):
     """Генерація PDF зі списком товарів та надсилання користувачу."""
     await call.answer()
     wait_message = await call.message.answer("⏳ Зачекайте, документ формується...")
-
     try:
         if not os.path.exists(FONT_PATH):
             await call.message.answer("❌ Помилка: Файл шрифту DejaVuSans.ttf не знайдено!")
             return
-
         items = await get_all_stock()
         now = datetime.now(kyiv_tz).strftime("%Y-%m-%d_%H-%M")
         filename = f"sklad_HD_{now}.pdf"
-
         pdf = FPDF()
         pdf.add_page()
         pdf.add_font("DejaVu", "", FONT_PATH, uni=True)
         pdf.set_font("DejaVu", '', 12)
-
         pdf.cell(200, 10, f"Наявність товарів на складі (станом на {now})", ln=True, align="C")
         pdf.ln(10)
-
         pdf.cell(30, 8, "ID", border=1, align="C")
         pdf.cell(80, 8, "Товар", border=1, align="C")
         pdf.cell(30, 8, "На складі", border=1, align="C")
         pdf.cell(30, 8, "Ціна", border=1, align="C")
         pdf.ln()
-
         for item in items:
             pdf.cell(30, 8, str(item["id"]), border=1, align="C")
             pdf.cell(80, 8, item["name"], border=1, align="L")
             pdf.cell(30, 8, str(item["stock"]), border=1, align="C")
             pdf.cell(30, 8, f"{item['price']}₴", border=1, align="C")
             pdf.ln()
-
         pdf.output(filename)
-
         await call.message.bot.delete_message(chat_id=call.message.chat.id, message_id=wait_message.message_id)
         file = FSInputFile(filename)
         await call.message.answer_document(file, caption="📄 Ось список наявних товарів на складі.")
         os.remove(filename)
-
     except Exception as e:
         await call.message.answer("❌ Помилка при створенні документа!")
         print(f"❌ ПОМИЛКА: {e}")
@@ -98,9 +88,7 @@ async def show_courses_for_order(bot, message):
     if not courses:
         await message.answer("❌ Немає доступних курсів для замовлення.")
         return
-
     markup = InlineKeyboardMarkup()
     for course in courses:
         markup.add(InlineKeyboardButton(course, callback_data=f"course_{course}"))
-
     await message.answer("📚 Оберіть курс для замовлення:", reply_markup=markup)
