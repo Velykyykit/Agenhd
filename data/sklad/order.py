@@ -1,10 +1,8 @@
-from aiogram import Bot, types
-from aiogram.fsm.state import StatesGroup, State
+from aiogram import Bot, F, types
 from aiogram.fsm.context import FSMContext
-from aiogram.types import InlineKeyboardButton, CallbackQuery
-from menu.keyboards import get_restart_keyboard
+from aiogram.types import CallbackQuery, InlineKeyboardButton
 from data.sklad.sklad import show_courses_for_order
-from aiogram import F
+from menu.keyboards import get_restart_keyboard
 
 # Оголошення FSM для замовлення
 class OrderForm(StatesGroup):
@@ -56,18 +54,15 @@ def register_order_handlers(router, get_main_menu_func):
     Реєструє обробники процесу замовлення у роутері.
     get_main_menu_func — функція, яка повертає головне меню.
     """
-    # Обробник callback для кнопки "order"
-    router.callback_query.register(
-        lambda call, state, bot: handle_order_callback(call, state, bot),
-        F.data == "order"
-    )
-    # Обробник callback для вибору курсу (починається з "course_")
-    router.callback_query.register(
-        process_course_selection,
-        lambda call: call.data.startswith("course_")
-    )
-    # Обробник для введення кількості (для стану waiting_for_quantity)
-    router.message.register(
-        lambda message, state: process_quantity(message, state, get_main_menu_func),
-        OrderForm.waiting_for_quantity
-    )
+    async def order_callback_wrapper(call: CallbackQuery, state: FSMContext, bot: Bot):
+        await handle_order_callback(call, state, bot)
+
+    async def course_selection_wrapper(call: CallbackQuery, state: FSMContext):
+        await process_course_selection(call, state)
+
+    async def quantity_wrapper(message: types.Message, state: FSMContext):
+        await process_quantity(message, state, get_main_menu_func)
+
+    router.callback_query.register(order_callback_wrapper, F.data == "order")
+    router.callback_query.register(course_selection_wrapper, lambda call: call.data.startswith("course_"))
+    router.message.register(quantity_wrapper, OrderForm.waiting_for_quantity)
