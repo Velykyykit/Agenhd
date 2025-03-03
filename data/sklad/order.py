@@ -57,12 +57,14 @@ async def process_course_selection(call: CallbackQuery, state: FSMContext):
     # Формуємо текст із детальною інформацією (у HTML)
     text = "Ось товари для цього курсу:<br><br>"
     for item in filtered_items:
+            text = "Ось товари для цього курсу:\n\n"
+    for item in filtered_items:
         text += (
-            f"<b>ID</b>: {item['id']}<br>"
-            f"<b>Назва</b>: {item['name']}<br>"
-            f"<b>Наявність</b>: {item['stock']}<br>"
-            f"<b>Доступно</b>: {item['available']}<br>"
-            f"<b>Ціна</b>: {item['price']}₴<br><br>"
+            f"<b>ID</b>: {item['id']}\n"
+            f"<b>Назва</b>: {item['name']}\n"
+            f"<b>Наявність</b>: {item['stock']}\n"
+            f"<b>Доступно</b>: {item['available']}\n"
+            f"<b>Ціна</b>: {item['price']}₴\n\n"
         )
 
     await call.message.answer(text, parse_mode="HTML")
