@@ -29,7 +29,11 @@ dp.include_router(router)
 auth_manager = AuthManager(SHEET_ID, CREDENTIALS_FILE)
 
 def get_main_menu():
-    markup = InlineKeyboardMarkup()
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📦 Склад", callback_data="sklad")],
+        [InlineKeyboardButton(text="📝 Завдання", callback_data="tasks")],
+        [InlineKeyboardButton(text="🙋‍♂️ Для мене", callback_data="forme")]
+    ])
     markup.add(InlineKeyboardButton("📦 Склад", callback_data="sklad"))
     markup.add(InlineKeyboardButton("📝 Завдання", callback_data="tasks"))
     markup.add(InlineKeyboardButton("🙋‍♂️ Для мене", callback_data="forme"))
