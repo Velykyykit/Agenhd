@@ -83,7 +83,7 @@ async def handle_sklad_call(call: types.CallbackQuery):
 # Обробник перевірки складу
 @router.callback_query(F.data == "check_stock")
 async def handle_stock_check(call: types.CallbackQuery):
-    await show_all_stock(call.message)
+    await show_all_stock(call)
 
 # Запуск бота
 async def main():
