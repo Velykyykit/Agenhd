@@ -19,9 +19,11 @@ from data.sklad.sklad import handle_sklad, show_all_stock
 # Клавіатури
 from menu.keyboards import get_phone_keyboard, get_restart_keyboard
 
-# aiogram-dialog
-from aiogram_dialog import DialogRegistry, StartMode
-from data.sklad.order import order_dialog, OrderSG   # наш діалог з order.py
+# === aiogram-dialog (Важливо) ===
+# Замість DialogRegistry імпортуємо setup_dialogs і StartMode
+from aiogram_dialog import setup_dialogs, StartMode
+from aiogram_dialog import DialogManager  # Для анотації типів
+from data.sklad.order import order_dialog, OrderSG  # Ваш діалог
 
 # Перегляд замовлень («Для мене»)
 from data.For_me.me import show_my_orders
@@ -32,6 +34,7 @@ TOKEN = os.getenv("TOKEN")
 SHEET_ID = os.getenv("SHEET_ID")
 SHEET_SKLAD = os.getenv("SHEET_SKLAD")
 CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
+
 if not TOKEN or not SHEET_ID or not SHEET_SKLAD or not CREDENTIALS_FILE:
     raise ValueError("❌ Не знайдено змінні середовища!")
 
@@ -129,14 +132,18 @@ async def restart_handler(message: types.Message):
         reply_markup=await get_restart_keyboard()
     )
 
-# Реєструємо діалог замовлення через aiogram-dialog
-registry = DialogRegistry(router)
-registry.register(order_dialog)
+# Замість DialogRegistry: підключаємо middleware для aiogram-dialog
+# Це додасть dialog_manager у ваші колбек- та message-обробники
+setup_dialogs(dp)
+
+# Підключаємо ваш діалог до Dispatcher (як router):
+dp.include_router(order_dialog)
 
 @router.callback_query(F.data == "order")
-async def start_order_dialog(call: types.CallbackQuery, dialog_manager: DialogRegistry):
+async def start_order_dialog(call: types.CallbackQuery, dialog_manager: DialogManager):
     """Запуск діалогу для оформлення замовлення."""
     await call.answer()
+    # Запускаємо діалог (OrderSG.select_course)
     await dialog_manager.start(OrderSG.select_course, mode=StartMode.RESET_STACK)
 
 async def main():
