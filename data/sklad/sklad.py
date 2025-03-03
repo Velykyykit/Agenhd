@@ -12,7 +12,6 @@ kyiv_tz = pytz.timezone("Europe/Kiev")
 
 CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
 FONT_PATH = os.path.join("/app/config/fonts", "DejaVuSans.ttf")
-print(f"✅ CREDENTIALS_FILE знайдено: {CREDENTIALS_FILE}")
 async def get_sklad_menu():
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("🛒 Зробити Замовлення", callback_data="order"))
