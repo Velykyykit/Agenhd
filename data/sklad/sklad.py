@@ -4,8 +4,11 @@ import asyncio
 from fpdf import FPDF
 from datetime import datetime
 import pytz
+from aiogram import Bot, types, Router
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
 from menu.keyboards import get_restart_keyboard
+
+router = Router()
 
 # Налаштовуємо часовий пояс для Києва
 kyiv_tz = pytz.timezone("Europe/Kiev")
@@ -13,33 +16,49 @@ kyiv_tz = pytz.timezone("Europe/Kiev")
 CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
 FONT_PATH = os.path.join("/app/config/fonts", "DejaVuSans.ttf")
 
-async def get_sklad_menu():
+
+def get_sklad_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🛒 Зробити Замовлення", callback_data="order")],
         [InlineKeyboardButton(text="📊 Перевірити Наявність", callback_data="check_stock")]
     ])
 
-async def handle_sklad(bot, message):
-    await message.answer("📦 Ви у розділі складу. Оберіть дію:", reply_markup=await get_sklad_menu())
+
+@router.callback_query(lambda call: call.data == "sklad")
+async def handle_sklad(call: types.CallbackQuery):
+    """Обробка складу."""
+    await call.message.answer("📦 Ви у розділі складу. Оберіть дію:", reply_markup=get_sklad_menu())
     keyboard = await get_restart_keyboard()
-    await message.answer("🔄 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=keyboard)
+    await call.message.answer("🔄 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=keyboard)
+
 
 async def get_all_stock():
+    """Отримує всі товари зі складу."""
     gc = gspread.service_account(filename=CREDENTIALS_PATH)
     sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
     worksheet = sh.worksheet("SKLAD")
 
     data = await asyncio.to_thread(worksheet.get_all_values)
-    stock_items = [dict(zip(data[0], row)) for row in data[1:]]
+    stock_items = [{
+        "id": row[0],
+        "course": row[1],
+        "name": row[2],
+        "stock": int(row[3]) if row[3].isdigit() else 0,
+        "available": int(row[4]) if row[4].isdigit() else 0,
+        "price": int(row[5]) if row[5].isdigit() else 0
+    } for row in data[1:]]
 
     return stock_items
 
-async def show_all_stock(bot, message):
-    wait_message = await message.answer("⏳ Зачекайте, документ формується...")
+
+@router.callback_query(lambda call: call.data == "check_stock")
+async def show_all_stock(call: types.CallbackQuery):
+    """Генерує PDF-файл зі списком товарів і надсилає користувачу."""
+    wait_message = await call.message.answer("⏳ Зачекайте, документ формується...")
 
     try:
         if not os.path.exists(FONT_PATH):
-            await message.answer("❌ Помилка: Файл шрифту DejaVuSans.ttf не знайдено!")
+            await call.message.answer("❌ Помилка: Файл шрифту DejaVuSans.ttf не знайдено!")
             return
 
         items = await get_all_stock()
@@ -69,11 +88,31 @@ async def show_all_stock(bot, message):
 
         pdf.output(filename)
 
-        await bot.delete_message(chat_id=message.chat.id, message_id=wait_message.message_id)
+        await call.message.delete()
         file = FSInputFile(filename)
-        await bot.send_document(message.chat.id, file, caption="📄 Ось список наявних товарів на складі.")
+        await call.message.answer_document(file, caption="📄 Ось список наявних товарів на складі.")
+
         os.remove(filename)
 
     except Exception as e:
-        await message.answer("❌ Помилка при створенні документа!")
+        await call.message.answer("❌ Помилка при створенні документа!")
         print(f"❌ ПОМИЛКА: {e}")
+
+
+@router.callback_query(lambda call: call.data == "order")
+async def show_courses_for_order(call: types.CallbackQuery):
+    """Показує список курсів для замовлення."""
+    gc = gspread.service_account(filename=CREDENTIALS_PATH)
+    sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
+    worksheet = sh.worksheet("dictionary")  # Аркуш із курсами
+
+    courses = await asyncio.to_thread(worksheet.col_values, 1)
+    if not courses:
+        await call.message.answer("❌ Немає доступних курсів для замовлення.")
+        return
+
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=course, callback_data=f"course_{course}")] for course in courses
+    ])
+
+    await call.message.answer("📚 Оберіть курс для замовлення:", reply_markup=markup)
