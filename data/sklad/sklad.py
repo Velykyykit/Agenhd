@@ -14,10 +14,10 @@ CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
 FONT_PATH = os.path.join("/app/config/fonts", "DejaVuSans.ttf")
 
 async def get_sklad_menu():
-    markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("🛒 Зробити Замовлення", callback_data="order"))
-    markup.add(InlineKeyboardButton("📊 Перевірити Наявність", callback_data="check_stock"))
-    return markup
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🛒 Зробити Замовлення", callback_data="order")],
+        [InlineKeyboardButton(text="📊 Перевірити Наявність", callback_data="check_stock")]
+    ])
 
 async def handle_sklad(bot, message):
     await message.answer("📦 Ви у розділі складу. Оберіть дію:", reply_markup=await get_sklad_menu())
@@ -91,8 +91,8 @@ async def show_courses_for_order(bot, message):
         await message.answer("❌ Немає доступних курсів для замовлення.")
         return
 
-    markup = InlineKeyboardMarkup()
-    for course in courses:
-        markup.add(InlineKeyboardButton(course, callback_data=f"course_{course}"))
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=course, callback_data=f"course_{course}")] for course in courses
+    ])
 
     await message.answer("📚 Оберіть курс для замовлення:", reply_markup=markup)
