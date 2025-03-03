@@ -4,7 +4,7 @@ import asyncio
 from fpdf import FPDF
 from datetime import datetime
 import pytz
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
 from menu.keyboards import get_restart_keyboard
 
 # Налаштовуємо часовий пояс для Києва
@@ -15,14 +15,14 @@ FONT_PATH = os.path.join("/app/config/fonts", "DejaVuSans.ttf")
 
 async def get_sklad_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🛒 Зробити Замовлення", callback_data="order")],
-        [InlineKeyboardButton(text="📊 Перевірити Наявність", callback_data="check_stock")]
+        [InlineKeyboardButton(text="🍔 Зробити Замовлення", callback_data="order")],
+        [InlineKeyboardButton(text="📈 Перевірити Наявність", callback_data="check_stock")]
     ])
 
 async def handle_sklad(bot, message):
-    await message.answer("📦 Ви у розділі складу. Оберіть дію:", reply_markup=await get_sklad_menu())
+    await message.answer("\ud83d\udce6 Ви у розділі складу. Оберіть дію:", reply_markup=await get_sklad_menu())
     keyboard = await get_restart_keyboard()
-    await message.answer("🔄 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=keyboard)
+    await message.answer("\ud83d\udd04 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=keyboard)
 
 async def get_all_stock():
     gc = gspread.service_account(filename=CREDENTIALS_PATH)
@@ -42,12 +42,11 @@ async def get_all_stock():
     return stock_items
 
 async def show_all_stock(bot, message):
-    wait_message = await message.answer("⏳ Зачекайте, документ формується...")
+    wait_message = await message.answer("\u231b Зачекайте, документ формується...")
 
     try:
-        # Перевірка чи шрифт є у контейнері
         if not os.path.exists(FONT_PATH):
-            await message.answer("❌ Помилка: Файл шрифту DejaVuSans.ttf не знайдено!")
+            await message.answer("\u274c Помилка: Файл шрифту DejaVuSans.ttf не знайдено!")
             return
 
         items = await get_all_stock()
@@ -56,8 +55,6 @@ async def show_all_stock(bot, message):
 
         pdf = FPDF()
         pdf.add_page()
-
-        # Додаємо підтримку шрифту DejaVuSans для кирилиці
         pdf.add_font("DejaVu", "", FONT_PATH, uni=True)
         pdf.set_font("DejaVu", '', 12)
 
@@ -81,27 +78,11 @@ async def show_all_stock(bot, message):
 
         await bot.delete_message(chat_id=message.chat.id, message_id=wait_message.message_id)
 
-        with open(filename, "rb") as file:
-            await bot.send_document(message.chat.id, file, caption="📄 Ось список наявних товарів на складі.")
+        file = FSInputFile(filename)
+        await bot.send_document(message.chat.id, file, caption="📄 Ось список наявних товарів на складі.")
 
         os.remove(filename)
 
     except Exception as e:
-        await message.answer("❌ Помилка при створенні документа!")
-        print(f"❌ ПОМИЛКА: {e}")
-
-async def show_courses_for_order(bot, message):
-    gc = gspread.service_account(filename=CREDENTIALS_PATH)
-    sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
-    worksheet = sh.worksheet("dictionary")
-
-    courses = await asyncio.to_thread(worksheet.col_values, 1)
-    if not courses:
-        await message.answer("❌ Немає доступних курсів для замовлення.")
-        return
-
-    markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=course, callback_data=f"course_{course}")] for course in courses
-    ])
-
-    await message.answer("📚 Оберіть курс для замовлення:", reply_markup=markup)
+        await message.answer("\u274c Помилка при створенні документа!")
+        print(f"\u274c ПОМИЛКА: {e}")
