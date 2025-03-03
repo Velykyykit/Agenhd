@@ -9,13 +9,12 @@ import os
 
 # Налаштування логування
 logging.basicConfig(level=logging.INFO)
-
 # Отримуємо змінні середовища
 TOKEN = os.getenv("TOKEN")
 SHEET_ID = os.getenv("SHEET_ID")
 SHEET_SKLAD = os.getenv("SHEET_SKLAD")
 CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
-
+print(f"✅ Завантажений токен: {TOKEN}")
 if not TOKEN or not SHEET_ID or not SHEET_SKLAD or not CREDENTIALS_FILE:
     raise ValueError("❌ Не знайдено змінні середовища! Перевірте Railway.")
 
