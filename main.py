@@ -52,6 +52,13 @@ async def send_welcome(message: types.Message):
 
 @router.message(F.contact)
 async def handle_contact(message: types.Message):
+    # Перевірка: чи справді контакт належить користувачу, що відправив повідомлення
+    if message.contact.user_id != message.from_user.id:
+        await message.answer(
+            "❌ Будь ласка, скористайтеся кнопкою '📲 Поділитися номером' для відправки саме вашого номера телефону."
+        )
+        return
+
     phone_number = message.contact.phone_number
     phone_number = auth_manager.clean_phone_number(phone_number)
     logging.info(f"[DEBUG] Отримано номер: {phone_number}")
