@@ -3,7 +3,6 @@ import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import (ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, 
                            InlineKeyboardButton, ReplyKeyboardRemove)
-from aiogram.utils import executor
 from config.auth import AuthManager
 from data.sklad.sklad import handle_sklad, show_all_stock, show_courses_for_order
 from menu.keyboards import get_phone_keyboard, get_restart_keyboard
@@ -23,7 +22,7 @@ if not TOKEN or not SHEET_ID or not SHEET_SKLAD or not CREDENTIALS_FILE:
 
 # Ініціалізація бота та диспетчера
 bot = Bot(token=TOKEN)
-dp = Dispatcher(bot)
+dp = Dispatcher()
 
 # Менеджер аутентифікації
 auth_manager = AuthManager(SHEET_ID, CREDENTIALS_FILE)
@@ -93,7 +92,7 @@ async def restart_bot(message: types.Message):
 
 # Запуск бота
 async def main():
-    await dp.start_polling()
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
