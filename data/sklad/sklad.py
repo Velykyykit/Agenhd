@@ -83,12 +83,16 @@ async def show_courses_for_order(bot, message):
     """Показує список курсів для замовлення."""
     gc = gspread.service_account(filename=CREDENTIALS_PATH)
     sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
-    worksheet = sh.worksheet("dictionary")
-    courses = await asyncio.to_thread(worksheet.col_values, 1)
+    worksheet = sh.worksheet("dictionary")  # Аркуш із курсами
+
+    courses = await asyncio.to_thread(worksheet.col_values, 1)  # Отримати всі назви курсів
     if not courses:
         await message.answer("❌ Немає доступних курсів для замовлення.")
         return
-    markup = InlineKeyboardMarkup()
+
+    # Ініціалізація клавіатури із вказанням inline_keyboard
+    markup = InlineKeyboardMarkup(inline_keyboard=[])
     for course in courses:
-        markup.add(InlineKeyboardButton(course, callback_data=f"course_{course}"))
+        markup.add(InlineKeyboardButton(text=course, callback_data=f"course_{course}"))
+
     await message.answer("📚 Оберіть курс для замовлення:", reply_markup=markup)
