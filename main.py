@@ -20,7 +20,7 @@ from data.sklad.sklad import handle_sklad, show_all_stock
 from menu.keyboards import get_phone_keyboard, get_restart_keyboard
 
 # aiogram-dialog
-from aiogram_dialog.registry import DialogRegistry, StartMode
+from aiogram_dialog import DialogRegistry, StartMode
 from data.sklad.order import order_dialog, OrderSG   # наш діалог з order.py
 
 # Перегляд замовлень («Для мене»)
