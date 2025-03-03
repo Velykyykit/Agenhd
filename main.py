@@ -39,7 +39,8 @@ def get_main_menu():
 # Обробник команди /start
 @router.message(F.text == "/start")
 async def send_welcome(message: types.Message):
-    await message.answer("📲 Поділіться номером для аутентифікації:", reply_markup=get_phone_keyboard())
+    keyboard = await get_phone_keyboard()  # Очікуємо результат
+    await message.answer("📲 Поділіться номером для аутентифікації:", reply_markup=keyboard)
 
 # Обробка контактних даних
 @router.message(F.contact)
