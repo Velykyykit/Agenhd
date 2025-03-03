@@ -93,6 +93,6 @@ async def show_courses_for_order(bot, message):
     # Ініціалізація клавіатури із вказанням inline_keyboard
     markup = InlineKeyboardMarkup(inline_keyboard=[])
     for course in courses:
-        markup.add(InlineKeyboardButton(text=course, callback_data=f"course_{course}"))
+        markup.inline_keyboard.append([InlineKeyboardButton(text=course, callback_data=f"course_{course}")])
 
     await message.answer("📚 Оберіть курс для замовлення:", reply_markup=markup)
