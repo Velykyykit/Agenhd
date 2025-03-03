@@ -45,13 +45,21 @@ async def show_all_stock(bot, message):
     wait_message = await message.answer("⏳ Зачекайте, документ формується...")
 
     try:
+        # Перевірка чи шрифт є у контейнері
+        if not os.path.exists(FONT_PATH):
+            await message.answer("❌ Помилка: Файл шрифту DejaVuSans.ttf не знайдено!")
+            return
+
         items = await get_all_stock()
         now = datetime.now(kyiv_tz).strftime("%Y-%m-%d_%H-%M")
         filename = f"sklad_HD_{now}.pdf"
 
         pdf = FPDF()
         pdf.add_page()
-        pdf.set_font("Arial", '', 12)
+
+        # Додаємо підтримку шрифту DejaVuSans для кирилиці
+        pdf.add_font("DejaVu", "", FONT_PATH, uni=True)
+        pdf.set_font("DejaVu", '', 12)
 
         pdf.cell(200, 10, f"Наявність товарів на складі (станом на {now})", ln=True, align="C")
         pdf.ln(10)
