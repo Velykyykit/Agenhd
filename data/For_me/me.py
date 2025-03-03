@@ -4,12 +4,7 @@ from orders_store import get_orders
 async def show_my_orders(message: types.Message):
     """
     Відображає список замовлень для користувача.
-    Кожне замовлення містить:
-      - ID товару
-      - Назву товару
-      - Кількість
-      - Ціну за одиницю
-    Замовлення зберігаються у in‑memory сховищі (orders_store).
+    Кожне замовлення містить ID товару, назву, кількість, ціну.
     """
     user_id = message.from_user.id
     orders = get_orders(user_id)
@@ -23,6 +18,6 @@ async def show_my_orders(message: types.Message):
                 f"ID товару: {order.get('item_id', 'N/A')}\n"
                 f"Назва: {order.get('item', 'N/A')}\n"
                 f"Кількість: {order.get('quantity', 'N/A')}\n"
-                f"Ціна за одиницю: {order.get('price', 'N/A')}₴\n\n"
+                f"Ціна: {order.get('price', 'N/A')}₴\n\n"
             )
         await message.answer(text, parse_mode="HTML")
