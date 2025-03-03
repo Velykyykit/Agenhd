@@ -15,14 +15,14 @@ FONT_PATH = os.path.join("/app/config/fonts", "DejaVuSans.ttf")
 
 async def get_sklad_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🍔 Зробити Замовлення", callback_data="order")],
-        [InlineKeyboardButton(text="📈 Перевірити Наявність", callback_data="check_stock")]
+        [InlineKeyboardButton(text="🛒 Зробити Замовлення", callback_data="order")],
+        [InlineKeyboardButton(text="📊 Перевірити Наявність", callback_data="check_stock")]
     ])
 
-async def handle_sklad(bot, message):
-    await message.answer("\ud83d\udce6 Ви у розділі складу. Оберіть дію:", reply_markup=await get_sklad_menu())
+async def handle_sklad(message):
+    await message.answer("📦 Ви у розділі складу. Оберіть дію:", reply_markup=await get_sklad_menu())
     keyboard = await get_restart_keyboard()
-    await message.answer("\ud83d\udd04 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=keyboard)
+    await message.answer("🔄 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=keyboard)
 
 async def get_all_stock():
     gc = gspread.service_account(filename=CREDENTIALS_PATH)
@@ -41,12 +41,12 @@ async def get_all_stock():
 
     return stock_items
 
-async def show_all_stock(bot, message):
-    wait_message = await message.answer("\u231b Зачекайте, документ формується...")
+async def show_all_stock(message):
+    wait_message = await message.answer("⏳ Зачекайте, документ формується...")
 
     try:
         if not os.path.exists(FONT_PATH):
-            await message.answer("\u274c Помилка: Файл шрифту DejaVuSans.ttf не знайдено!")
+            await message.answer("❌ Помилка: Файл шрифту DejaVuSans.ttf не знайдено!")
             return
 
         items = await get_all_stock()
@@ -76,13 +76,13 @@ async def show_all_stock(bot, message):
 
         pdf.output(filename)
 
-        await bot.delete_message(chat_id=message.chat.id, message_id=wait_message.message_id)
+        await message.bot.delete_message(chat_id=message.chat.id, message_id=wait_message.message_id)
 
         file = FSInputFile(filename)
-        await bot.send_document(message.chat.id, file, caption="📄 Ось список наявних товарів на складі.")
+        await message.answer_document(file, caption="📄 Ось список наявних товарів на складі.")
 
         os.remove(filename)
 
     except Exception as e:
-        await message.answer("\u274c Помилка при створенні документа!")
-        print(f"\u274c ПОМИЛКА: {e}")
+        await message.answer("❌ Помилка при створенні документа!")
+        print(f"❌ ПОМИЛКА: {e}")
