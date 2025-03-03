@@ -5,7 +5,6 @@ from aiogram.types import (ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMa
                            InlineKeyboardButton, ReplyKeyboardRemove)
 from config.auth import AuthManager
 from data.sklad.sklad import handle_sklad, show_all_stock, show_courses_for_order
-from menu.keyboards import get_phone_keyboard, get_restart_keyboard
 import os
 
 # Налаштування логування
@@ -36,11 +35,17 @@ def get_main_menu():
     markup.add(InlineKeyboardButton("🙋‍♂️ Для мене", callback_data="forme"))
     return markup
 
+def get_phone_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="📞 Поділитися номером", request_contact=True)]],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+
 # Обробник команди /start
 @router.message(F.text == "/start")
 async def send_welcome(message: types.Message):
-    keyboard = await get_phone_keyboard()  # Очікуємо результат
-    await message.answer("📲 Поділіться номером для аутентифікації:", reply_markup=keyboard)
+    await message.answer("📲 Поділіться номером для аутентифікації:", reply_markup=get_phone_keyboard())
 
 # Обробка контактних даних
 @router.message(F.contact)
