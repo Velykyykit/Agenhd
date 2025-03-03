@@ -3,6 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardButton
 from data.sklad.sklad import show_courses_for_order
 from menu.keyboards import get_restart_keyboard
+from aiogram.fsm.state import StatesGroup, State
 
 # Оголошення FSM для замовлення
 class OrderForm(StatesGroup):
