@@ -73,7 +73,6 @@ async def handle_contact(message: types.Message):
         await message.answer("❌ Сталася помилка під час перевірки номера. Спробуйте пізніше.")
         logging.error(f"❌ ПОМИЛКА: {e}")
 
-# Обробник вибору меню
 @router.callback_query(F.data.in_(["sklad", "tasks", "forme"]))
 async def handle_main_menu(call: types.CallbackQuery):
     if call.data == "sklad":
@@ -83,22 +82,6 @@ async def handle_main_menu(call: types.CallbackQuery):
     elif call.data == "forme":
         await call.message.answer("🙋‍♂️ Розділ 'Для мене' ще в розробці.")
 
-# Обробник перевірки складу
-@router.callback_query(F.data == "check_stock")
-async def handle_stock_check(call: types.CallbackQuery):
-    await show_all_stock(bot, call.message)
-
-# Обробник оформлення замовлення
-@router.callback_query(F.data == "order")
-async def handle_order(call: types.CallbackQuery):
-    await show_courses_for_order(bot, call.message)
-
-# Обробник кнопки "🔄 Почати спочатку"
-@router.message(F.text == "🔄 Почати спочатку")
-async def restart_bot(message: types.Message):
-    await message.answer("📌 Оберіть розділ:", reply_markup=get_main_menu())
-
-# Запуск бота
 async def main():
     await dp.start_polling(bot)
 
