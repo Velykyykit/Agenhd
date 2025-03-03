@@ -1,89 +1,118 @@
-import asyncio
-import logging
-from aiogram import Bot, Dispatcher, types, Router, F
-from aiogram.types import (ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, 
-                           InlineKeyboardButton, ReplyKeyboardRemove)
-from config.auth import AuthManager
-from data.sklad.sklad import handle_sklad, show_all_stock, show_courses_for_order
 import os
+import gspread
+import asyncio
+from fpdf import FPDF
+from datetime import datetime
+import pytz
+from aiogram import Bot, types, Router
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
+from menu.keyboards import get_restart_keyboard
 
-# Налаштування логування
-logging.basicConfig(level=logging.INFO)
-
-# Отримуємо змінні середовища
-TOKEN = os.getenv("TOKEN")
-SHEET_ID = os.getenv("SHEET_ID")
-SHEET_SKLAD = os.getenv("SHEET_SKLAD")
-CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
-
-if not TOKEN or not SHEET_ID or not SHEET_SKLAD or not CREDENTIALS_FILE:
-    raise ValueError("❌ Не знайдено змінні середовища! Перевірте Railway.")
-
-# Ініціалізація бота, диспетчера та роутера
-bot = Bot(token=TOKEN)
-dp = Dispatcher()
 router = Router()
-dp.include_router(router)
 
-# Менеджер аутентифікації
-auth_manager = AuthManager(SHEET_ID, CREDENTIALS_FILE)
+# Налаштовуємо часовий пояс для Києва
+kyiv_tz = pytz.timezone("Europe/Kiev")
 
-def get_main_menu():
+CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
+FONT_PATH = os.path.join("/app/config/fonts", "DejaVuSans.ttf")
+
+
+def get_sklad_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📦 Склад", callback_data="sklad")],
-        [InlineKeyboardButton(text="📝 Завдання", callback_data="tasks")],
-        [InlineKeyboardButton(text="🙋‍♂️ Для мене", callback_data="forme")]
+        [InlineKeyboardButton(text="🛒 Зробити Замовлення", callback_data="order")],
+        [InlineKeyboardButton(text="📊 Перевірити Наявність", callback_data="check_stock")]
     ])
 
-def get_phone_keyboard():
-    return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📞 Поділитися номером", request_contact=True)]],
-        resize_keyboard=True,
-        one_time_keyboard=True
-    )
 
-# Обробник команди /start
-@router.message(F.text == "/start")
-async def send_welcome(message: types.Message):
-    await message.answer("📲 Поділіться номером для аутентифікації:", reply_markup=get_phone_keyboard())
+@router.callback_query(lambda call: call.data == "sklad")
+async def handle_sklad(call: types.CallbackQuery):
+    """Обробка складу."""
+    await call.message.answer("📦 Ви у розділі складу. Оберіть дію:", reply_markup=get_sklad_menu())
+    keyboard = await get_restart_keyboard()
+    await call.message.answer("🔄 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=keyboard)
 
-# Обробка контактних даних
-@router.message(F.contact)
-async def handle_contact(message: types.Message):
-    phone_number = message.contact.phone_number
-    phone_number = auth_manager.clean_phone_number(phone_number)
 
-    logging.info(f"[DEBUG] Отримано номер: {phone_number}")
+async def get_all_stock():
+    """Отримує всі товари зі складу."""
+    gc = gspread.service_account(filename=CREDENTIALS_PATH)
+    sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
+    worksheet = sh.worksheet("SKLAD")
+
+    data = await asyncio.to_thread(worksheet.get_all_values)
+    stock_items = [{
+        "id": row[0],
+        "course": row[1],
+        "name": row[2],
+        "stock": int(row[3]) if row[3].isdigit() else 0,
+        "available": int(row[4]) if row[4].isdigit() else 0,
+        "price": int(row[5]) if row[5].isdigit() else 0
+    } for row in data[1:]]
+
+    return stock_items
+
+
+@router.callback_query(lambda call: call.data == "check_stock")
+async def show_all_stock(call: types.CallbackQuery):
+    """Генерує PDF-файл зі списком товарів і надсилає користувачу."""
+    wait_message = await call.message.answer("⏳ Зачекайте, документ формується...")
 
     try:
-        user_data = await auth_manager.check_user_in_database(phone_number)
-        logging.info(f"[DEBUG] Відповідь від auth.py: {user_data}")
+        if not os.path.exists(FONT_PATH):
+            await call.message.answer("❌ Помилка: Файл шрифту DejaVuSans.ttf не знайдено!")
+            return
 
-        if user_data:
-            await message.answer(
-                f"✅ Вітаю, *{user_data['name']}*! Ви успішно ідентифіковані. 🎉",
-                parse_mode="Markdown",
-                reply_markup=ReplyKeyboardRemove()
-            )
-            await message.answer("📌 Оберіть розділ:", reply_markup=get_main_menu())
-        else:
-            await message.answer("❌ Ваш номер не знайдено у базі. Зверніться до адміністратора.")
+        items = await get_all_stock()
+        now = datetime.now(kyiv_tz).strftime("%Y-%m-%d_%H-%M")
+        filename = f"sklad_HD_{now}.pdf"
+
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.add_font("DejaVu", "", FONT_PATH, uni=True)
+        pdf.set_font("DejaVu", '', 12)
+
+        pdf.cell(200, 10, f"Наявність товарів на складі (станом на {now})", ln=True, align="C")
+        pdf.ln(10)
+
+        pdf.cell(30, 8, "ID", border=1, align="C")
+        pdf.cell(80, 8, "Товар", border=1, align="C")
+        pdf.cell(30, 8, "На складі", border=1, align="C")
+        pdf.cell(30, 8, "Ціна", border=1, align="C")
+        pdf.ln()
+
+        for item in items:
+            pdf.cell(30, 8, str(item["id"]), border=1, align="C")
+            pdf.cell(80, 8, item["name"], border=1, align="L")
+            pdf.cell(30, 8, str(item["stock"]), border=1, align="C")
+            pdf.cell(30, 8, f"{item['price']}₴", border=1, align="C")
+            pdf.ln()
+
+        pdf.output(filename)
+
+        await call.message.delete()
+        file = FSInputFile(filename)
+        await call.message.answer_document(file, caption="📄 Ось список наявних товарів на складі.")
+
+        os.remove(filename)
 
     except Exception as e:
-        await message.answer("❌ Сталася помилка під час перевірки номера. Спробуйте пізніше.")
-        logging.error(f"❌ ПОМИЛКА: {e}")
+        await call.message.answer("❌ Помилка при створенні документа!")
+        print(f"❌ ПОМИЛКА: {e}")
 
-@router.callback_query(F.data.in_(["sklad", "tasks", "forme"]))
-async def handle_main_menu(call: types.CallbackQuery):
-    if call.data == "sklad":
-        await handle_sklad(bot, call.message)
-    elif call.data == "tasks":
-        await call.message.answer("📝 Розділ 'Завдання' ще в розробці.")
-    elif call.data == "forme":
-        await call.message.answer("🙋‍♂️ Розділ 'Для мене' ще в розробці.")
 
-async def main():
-    await dp.start_polling(bot)
+@router.callback_query(lambda call: call.data == "order")
+async def show_courses_for_order(call: types.CallbackQuery):
+    """Показує список курсів для замовлення."""
+    gc = gspread.service_account(filename=CREDENTIALS_PATH)
+    sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
+    worksheet = sh.worksheet("dictionary")  # Аркуш із курсами
 
-if __name__ == "__main__":
-    asyncio.run(main())
+    courses = await asyncio.to_thread(worksheet.col_values, 1)
+    if not courses:
+        await call.message.answer("❌ Немає доступних курсів для замовлення.")
+        return
+
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=course, callback_data=f"course_{course}")] for course in courses
+    ])
+
+    await call.message.answer("📚 Оберіть курс для замовлення:", reply_markup=markup)
