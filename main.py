@@ -18,10 +18,13 @@ from data.sklad.sklad import handle_sklad, show_all_stock
 # Клавіатури
 from menu.keyboards import get_phone_keyboard, get_restart_keyboard
 
-# Обробники замовлень (курс → товар → кількість)
-from data.sklad.order import register_order_handlers
+# Обробники замовлень через aiogram-dialog
+from aiogram_dialog import DialogRegistry, StartMode
+from data.sklad.order_dialog import order_dialog, OrderSG
 
-# Налаштування логування
+# Обробник перегляду замовлень ("Для мене")
+from data.For_me.me import show_my_orders
+
 logging.basicConfig(level=logging.INFO)
 
 # Отримання змінних середовища
@@ -50,7 +53,6 @@ def get_main_menu():
         [InlineKeyboardButton(text="🙋‍♂️ Для мене", callback_data="forme")]
     ])
 
-# Обробник команди /start
 @router.message(F.text == "/start")
 async def send_welcome(message: types.Message):
     """Надсилає запит на поділитися номером телефону."""
@@ -116,9 +118,9 @@ async def handle_tasks(call: types.CallbackQuery):
 
 @router.callback_query(F.data == "forme")
 async def handle_forme(call: types.CallbackQuery):
-    """Розділ 'Для мене' (поки в розробці)."""
+    """Розділ 'Для мене' – перегляд замовлень."""
     await call.answer()
-    await call.message.answer("🙋‍♂️ Розділ 'Для мене' ще в розробці.")
+    await show_my_orders(call.message)
 
 @router.message(F.text == "🔄 Почати спочатку")
 async def restart_handler(message: types.Message):
@@ -130,8 +132,15 @@ async def restart_handler(message: types.Message):
         reply_markup=await get_restart_keyboard()
     )
 
-# Реєструємо обробники замовлення з файлу order.py
-register_order_handlers(router, get_main_menu)
+# Реєструємо діалог замовлення через aiogram-dialog
+registry = DialogRegistry(router)
+registry.register(order_dialog)
+
+@router.callback_query(F.data == "order")
+async def start_order_dialog(call: types.CallbackQuery, dialog_manager: DialogRegistry):
+    await call.answer()
+    # Запускаємо діалог із першим станом (OrderSG.select_course)
+    await dialog_manager.start(OrderSG.select_course, mode=StartMode.NORMAL)
 
 async def main():
     """Запуск бота в режимі polling."""
