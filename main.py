@@ -92,7 +92,6 @@ async def restart_bot(message: types.Message):
 # Запуск бота
 async def main():
     await bot.delete_webhook(drop_pending_updates=True)
-    dp.include_router(dp)
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
