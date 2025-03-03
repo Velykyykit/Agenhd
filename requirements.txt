@@ -1,5 +1,5 @@
-aiogram
-aiogram-dialog>=2.3.1
+aiogram==3.18.0
+aiogram-dialog==2.3.1
 telebot
 gspread
 oauth2client
