@@ -1,4 +1,5 @@
 aiogram
+aiogram-dialog
 telebot
 gspread
 oauth2client
