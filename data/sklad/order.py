@@ -34,7 +34,7 @@ async def get_items(dialog_manager: DialogManager, **kwargs):
     worksheet = sh.worksheet("SKLAD")
     all_items = worksheet.get_all_records()
     filtered_items = [item for item in all_items if item["course"] == selected_course]
-    return {"items": filtered}
+    return {"items": filtered_items}
 
 async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
     manager.dialog_data["selected_course"] = item_id
@@ -111,10 +111,10 @@ order_dialog = Dialog(
         Const("Оберіть курс:"),
         ScrollingGroup(
             Select(Format("{item}"), items="courses", id="course_select", item_id_getter=lambda item: item, on_click=select_course),
-            width=1, height=10, id="scroll_courses"
+            width=4, height=1, id="scroll_courses_horizontal"
         ),
         state=OrderDialog.select_course,
-        getter=lambda **kwargs: {"courses": ["Курс 1", "Курс 2", "Курс 3"]},
+        getter=get_courses,
     ),
     Window(
         Const("Виберіть товари:"),
