@@ -4,7 +4,7 @@ import asyncio
 import gspread
 from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
-from aiogram_dialog.widgets.kbd import Button, Select, Cancel
+from aiogram_dialog.widgets.kbd import ScrollingGroup
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 from fpdf import FPDF
@@ -111,14 +111,21 @@ order_dialog = Dialog(
     Window(
         Const("Виберіть товари:"),
         ScrollingGroup(
-            Select(Format("{item[name]} - {item[price]} грн"), items="items", id="item_select"),
-            Button(Const("➕"), id="plus", on_click=change_quantity),
-            Button(Const("➖"), id="minus", on_click=change_quantity),
+            Select(
+                Format("{item[name]} - {item[price]} грн"),
+                items="items",
+                id="item_select",
+                item_id_getter=lambda item: item["id"],
+            ),
             width=1, height=10,
+            id="scroll_items"
         ),
-    Button(Const("Оформити замовлення"), id="confirm_order", on_click=confirm_order),
-    state=OrderDialog.select_items,
-    getter=get_items,
+        Button(Const("➕"), id="plus", on_click=change_quantity),
+        Button(Const("➖"), id="minus", on_click=change_quantity),
+        Button(Const("Оформити замовлення"), id="confirm_order", on_click=confirm_order),
+        state=OrderDialog.select_items,
+        getter=get_items,
+    )
 )
 
 dialog = Dialog(select_items_window)
