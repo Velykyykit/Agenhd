@@ -22,7 +22,7 @@ class OrderDialog(StatesGroup):
 
 async def get_courses(**kwargs):
     gc = gspread.service_account(filename=CREDENTIALS_PATH)
-    sh = gc.open_by_key(SHEET_ID)
+    sh = gc.open_by_key(SHEET_SKLAD)  # правильна таблиця
     worksheet = sh.worksheet("dictionary")
     courses = worksheet.col_values(1)
     return {"courses": courses}
