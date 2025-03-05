@@ -16,19 +16,34 @@ SHEET_ORDER = os.getenv("SHEET_ORDER")
 CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
 
 class OrderDialog(StatesGroup):
+    select_course = State()
     select_items = State()
     confirm_order = State()
 
-async def get_items(**kwargs):
+async def get_courses(**kwargs):
     gc = gspread.service_account(filename=CREDENTIALS_PATH)
     sh = gc.open_by_key(SHEET_ID)
+    worksheet = sh.worksheet("dictionary")
+    courses = worksheet.col_values(1)
+    return {"courses": courses}
+
+async def get_items(dialog_manager: DialogManager, **kwargs):
+    selected_course = dialog_manager.dialog_data.get("selected_course")
+    gc = gspread.service_account(filename=CREDENTIALS_PATH)
+    sh = gc.open_by_key(SHEET_SKLAD)
     worksheet = sh.worksheet("SKLAD")
-    data = worksheet.get_all_records()
-    return {"items": data}
+    all_items = worksheet.get_all_records()
+    filtered_items = [item for item in all_items if item["course"] == selected_course]
+    return {"items": filtered}
+
+async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
+    manager.dialog_data["selected_course"] = item_id
+    await manager.switch_to(OrderDialog.select_items)
 
 async def change_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
     cart = manager.dialog_data.setdefault("cart", {})
-    cart[item_id] = cart.get(item_id, 0) + (1 if callback.data == "plus" else -1)
+    action = 1 if callback.data == "plus" else -1
+    cart[item_id] = cart.get(item_id, 0) + action
     if cart[item_id] < 0:
         cart[item_id] = 0
 
@@ -75,7 +90,7 @@ async def confirm_order(call: types.CallbackQuery, widget, manager: DialogManage
     total_sum = 0
     worksheet = sheet
     for item_id, qty in cart.items():
-        worksheet.append_row([item_id, "Назва товару", "Ціна", qty, "Сума"])  # Потрібно замінити на актуальні дані
+        worksheet.append_row([item_id, "Назва товару", "Ціна", qty, "Сума"])  # Замінити на реальні дані
 
     pdf_file = generate_pdf(order_id=user_id, order_data=cart)
 
@@ -92,6 +107,15 @@ async def confirm_order(call: types.CallbackQuery, widget, manager: DialogManage
     await call.message.answer_document(types.FSInputFile(pdf_file), caption="Ваше замовлення оформлено.")
 
 order_dialog = Dialog(
+    Window(
+        Const("Оберіть курс:"),
+        ScrollingGroup(
+            Select(Format("{item}"), items="courses", id="course_select", item_id_getter=lambda item: item, on_click=select_course),
+            width=1, height=10, id="scroll_courses"
+        ),
+        state=OrderDialog.select_course,
+        getter=lambda **kwargs: {"courses": ["Курс 1", "Курс 2", "Курс 3"]},
+    ),
     Window(
         Const("Виберіть товари:"),
         ScrollingGroup(
