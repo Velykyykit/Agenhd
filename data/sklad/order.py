@@ -41,7 +41,12 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
 
     rows = worksheet_sklad.get_all_records()
     products = [
-        {"id": str(row["id"]), "name": row["name"], "price": row["price"], "quantity": cart.get(str(row["id"]), 0)}
+        {
+            "id": str(row["id"]),
+            "name": row["name"],
+            "price": row["price"],
+            "quantity": cart.get(str(row["id"]), 0),
+        }
         for row in rows if row["course"] == selected_course
     ]
 
@@ -62,7 +67,8 @@ async def select_course(callback: types.CallbackQuery, widget, manager: DialogMa
     await manager.next()
 
 # Обробники кнопок ➖ та ➕
-async def update_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str, delta: int):
+async def update_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, delta: int):
+    item_id = widget.widget_id.split("_")[-1]  # Отримуємо id товару з ідентифікатора кнопки
     cart = manager.dialog_data.setdefault("cart", {})
     current_quantity = cart.get(item_id, 0)
     new_quantity = max(0, current_quantity + delta)  # Не дозволяємо значення менше 0
@@ -96,11 +102,11 @@ product_window = Window(
     ScrollingGroup(
         Row(
             Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"),
-            Button(Const("➖"), id=lambda i: f"minus_{i['id']}",
-                   on_click=lambda c, w, m: update_quantity(c, w, m, w.widget_id.split("_")[-1], -1)),
+            Button(Const("➖"), id=lambda item: f"minus_{item['id']}",
+                   on_click=lambda c, w, m: update_quantity(c, w, m, -1)),
             Format("{item[quantity]}"),
-            Button(Const("➕"), id=lambda i: f"plus_{i['id']}",
-                   on_click=lambda c, w, m: update_quantity(c, w, m, w.widget_id.split("_")[-1], 1)),
+            Button(Const("➕"), id=lambda item: f"plus_{item['id']}",
+                   on_click=lambda c, w, m: update_quantity(c, w, m, 1)),
         ),
         items="products",
         id="products_scroller",
