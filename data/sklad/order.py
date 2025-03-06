@@ -4,7 +4,7 @@ import asyncio
 import gspread
 from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
-from aiogram_dialog.widgets.kbd import Button, Select, Cancel, Column, Row
+from aiogram_dialog.widgets.kbd import Button, Select, Cancel, Grid
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 from fpdf import FPDF
@@ -33,10 +33,11 @@ async def get_items(dialog_manager: DialogManager, **kwargs):
     sh = gc.open_by_key(SHEET_SKLAD)
     worksheet = sh.worksheet("SKLAD")
     all_items = worksheet.get_all_records()
-    filtered_items = [item for item in all_items if item["course"] == selected_course]
     cart = dialog_manager.dialog_data.get("cart", {})
-    for item in filtered_items:
-        item["quantity"] = cart.get(item["id"], 0)
+    filtered_items = [
+        {"id": str(item["id"]), "name": item["name"], "price": item["price"], "quantity": cart.get(str(item["id"]), 0)}
+        for item in all_items if item["course"] == selected_course
+    ]
     return {"items": filtered_items}
 
 async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
@@ -45,10 +46,9 @@ async def select_course(callback: types.CallbackQuery, widget, manager: DialogMa
 
 async def change_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
     cart = manager.dialog_data.setdefault("cart", {})
-    action = 1 if callback.data.endswith("plus") else -1
-    cart[item_id] = cart.get(item_id, 0) + action
-    if cart[item_id] < 0:
-        cart[item_id] = 0
+    action = 1 if "plus" in callback.data else -1
+    cart[item_id] = max(cart.get(item_id, 0) + action, 0)
+    await manager.update()
 
 async def create_temp_sheet(user_id):
     date_str = datetime.datetime.now().strftime("%d-%m-%Y_%H-%M")
@@ -120,15 +120,19 @@ order_dialog = Dialog(
         getter=get_courses,
     ),
     Window(
-        Const("Виберіть товари:"),
-        Column(
-            Format("{item[name]} - {item[price]} грн | Кількість: {item[quantity]}"),
-            Row(
-                Button(Const("➖"), id="{item[id]}_minus", on_click=change_quantity),
-                Button(Const("➕"), id="{item[id]}_plus", on_click=change_quantity),
+        Const("🛒 Виберіть товари:"),
+        Grid(
+            Select(
+                Format("{item[name]} \n 💰 {item[price]} грн \n 🛍 {item[quantity]} шт"),
+                items="items",
+                id="item_select",
+                item_id_getter=lambda item: item["id"],
             ),
+            Button(Const("➖"), id="minus", on_click=change_quantity),
+            Button(Const("➕"), id="plus", on_click=change_quantity),
+            width=3,  # Кількість товарів у ряді
         ),
-        Button(Const("Оформити замовлення"), id="confirm_order", on_click=confirm_order),
+        Button(Const("🛍 ОФОРМИТИ ЗАМОВЛЕННЯ"), id="confirm_order", on_click=confirm_order),
         state=OrderDialog.select_items,
         getter=get_items,
     )
