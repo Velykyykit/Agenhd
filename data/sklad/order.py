@@ -86,16 +86,16 @@ course_window = Window(
 product_window = Window(
     Format("📦 Товари курсу {dialog_data[selected_course]}:"),
     ScrollingGroup(
-        Select(
-            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"),
-            items="products",
-            id="product_select",
-            item_id_getter=lambda item: item["id"],
-            on_click=lambda c, w, m, item_id: c.answer(f"ℹ️ Ви вибрали товар {item_id}")
-        ),
+        *[
+            Row(
+                Button(Const("⠀"), id=f"empty_left_{item['id']}"),  # Ліва пустая кнопка
+                Button(Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"), id=f"product_{item['id']}"),
+                Button(Const("⠀"), id=f"empty_right_{item['id']}")  # Права пустая кнопка
+            ) for item in dialog_manager.dialog_data.get("products", [])
+        ],
+        id="products_scroller",
         width=1,
         height=10,
-        id="products_scroller",
         hide_on_single_page=True
     ),
     Row(
