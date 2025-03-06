@@ -11,6 +11,16 @@ logger = logging.getLogger(__name__)
 SHEET_DICTIONARY = "dictionary"
 SHEET_SKLAD = "SKLAD"
 
+async def change_quantity(c: types.CallbackQuery, w, m: DialogManager, item_id, change):
+    """Зміна кількості товару"""
+    logger.debug(f"[DEBUG] Зміна кількості товару: {item_id}, зміна на {change}")
+    # Логіка зміни кількості товару
+
+async def confirm_order(c: types.CallbackQuery, w, m: DialogManager):
+    """Підтвердження замовлення"""
+    logger.debug("[DEBUG] Замовлення підтверджено")
+    await c.message.answer("✅ Ваше замовлення підтверджено!")
+
 async def get_courses(dialog_manager: DialogManager, **kwargs):
     """Отримання списку курсів"""
     courses = await dialog_manager.middleware_data["gspread_client"].get_data(SHEET_DICTIONARY)
@@ -35,11 +45,7 @@ order_dialog = Dialog(
             text=lambda item: f"🎓 {item['name']}",
             id="select_course",
             item_id_getter=lambda item: item["short"],
-            items="courses",  # Додаємо items
-            on_click=lambda c, w, m, item_id: (
-                m.dialog_data.update(selected_course=item_id),
-                m.switch_to("OrderDialog:select_items")
-            )
+            on_click=lambda c, w, m, item_id: m.dialog_data.update(selected_course=item_id) or m.switch_to("OrderDialog:select_items")
         ),
         state="OrderDialog:select_course",
         getter=get_courses  # Виклик `get_courses`
@@ -51,7 +57,6 @@ order_dialog = Dialog(
                 text=lambda item: f"➕ {item['name']}",
                 id="select_item",
                 item_id_getter=lambda item: item["id"],
-                items="items",  # Додаємо items
                 on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, +1)
             )
         ),
@@ -60,11 +65,3 @@ order_dialog = Dialog(
         getter=get_items  # Виклик `get_items`
     )
 )
-
-async def change_quantity(c: types.CallbackQuery, w, m: DialogManager, item_id, change):
-    """Зміна кількості товару"""
-    pass
-
-async def confirm_order(c: types.CallbackQuery, w, m: DialogManager):
-    """Підтвердження замовлення"""
-    pass
