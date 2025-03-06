@@ -1,8 +1,9 @@
 import os
+import datetime
 import gspread
 from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
-from aiogram_dialog.widgets.kbd import Button, Select, Row, Group
+from aiogram_dialog.widgets.kbd import Button, Select, Row, Column, Group
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 
@@ -23,14 +24,14 @@ async def get_courses(**kwargs):
     courses = worksheet.get_all_records(numericise_ignore=['all'], head=1)
     
     formatted_courses = [
-        {"name": course["course"], "short": course["short"]} for course in courses
+        {"name": course.get("course"), "short": course.get("short")} for course in courses
     ]
     return formatted_courses
 
 async def get_courses_in_columns(**kwargs):
-    """Розбиття курсів на два стовпці."""
+    """Розбиття курсів на два стовпці по 10."""
     courses = await get_courses()
-    left_column = courses[:10]  
+    left_column = courses[:10]
     right_column = courses[10:]
     return {"left_courses": left_column, "right_courses": right_column}
 
@@ -44,7 +45,7 @@ async def get_items(dialog_manager: DialogManager, **kwargs):
     data = worksheet.get_all_records(numericise_ignore=['all'], head=1)
     
     items = [
-        {"id": item["id"], "name": item["name"], "price": item["price"], "quantity": 0}
+        {"id": str(item["id"]), "name": item["name"], "price": item["price"], "quantity": 0}
         for item in data if item["course"] == selected_course
     ]
     return {"items": items}
@@ -76,13 +77,13 @@ order_dialog = Dialog(
     ),
     Window(
         Const("🛍️ Оберіть товари:"),
-        Group(
+        Column(
             Row(
-                Button(Const("➖"), id="minus_{item[id]}", on_click=lambda c, w, m, item_id="{item[id]}": change_quantity(c, w, m, item_id, -1)),
+                Button(Const("➖"), id=lambda item: f"minus_{item['id']}", on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, -1)),
                 Format("🏷️ {item[name]} - 💰 {item[price]} грн | 🛒 {item[quantity]}"),
-                Button(Const("➕"), id="plus_{item[id]}", on_click=lambda c, w, m, item_id="{item[id]}": change_quantity(c, w, m, item_id, 1))
+                Button(Const("➕"), id=lambda item: f"plus_{item['id']}", on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, 1))
             ),
-            width=1
+            items="items"
         ),
         Button(Const("✅ Оформити замовлення"), id="confirm_order", on_click=lambda c, w, m: m.switch_to(OrderDialog.confirm_order)),
         state=OrderDialog.select_items,
