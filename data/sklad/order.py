@@ -91,11 +91,11 @@ course_window = Window(
 
 # Вікно виводу товарів
 product_window = Window(
-    Format("📦 Товари курсу {dialog_data[selected_course]}:"),
+    Format("📦 Товари курсу {dialog_data.get('selected_course', '❓Не вибрано')}:"),
     
     ScrollingGroup(
         Select(
-            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн | 📦 {dialog_data[cart].get(item[id], 0)} шт"),
+            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн | 📦 {dialog_data.get('cart', {}).get(item[id], 0)} шт"),
             items="products",
             id="product_select",
             item_id_getter=lambda item: item["id"],
