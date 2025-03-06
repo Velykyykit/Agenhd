@@ -4,7 +4,7 @@ import asyncio
 import gspread
 from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
-from aiogram_dialog.widgets.kbd import Button, Select, Cancel, Column
+from aiogram_dialog.widgets.kbd import Button, Select, Cancel, Row, Column
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 from fpdf import FPDF
@@ -14,6 +14,7 @@ SHEET_SKLAD = os.getenv("SHEET_SKLAD")
 SHEET_ID = os.getenv("SHEET_ID")
 SHEET_ORDER = os.getenv("SHEET_ORDER")
 CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
+IMG_PATH = "data/sklad/img"
 
 class OrderDialog(StatesGroup):
     select_course = State()
@@ -24,8 +25,11 @@ async def get_courses(**kwargs):
     gc = gspread.service_account(filename=CREDENTIALS_PATH)
     sh = gc.open_by_key(SHEET_SKLAD)
     worksheet = sh.worksheet("dictionary")
-    courses = worksheet.col_values(1)
-    return {"courses": courses}
+    courses = worksheet.get_all_records()
+    formatted_courses = [
+        {"name": course["A"], "short": course["B"]} for course in courses
+    ]
+    return {"courses": formatted_courses}
 
 async def get_items(dialog_manager: DialogManager, **kwargs):
     selected_course = dialog_manager.dialog_data.get("selected_course")
@@ -35,7 +39,13 @@ async def get_items(dialog_manager: DialogManager, **kwargs):
     all_items = worksheet.get_all_records()
     cart = dialog_manager.dialog_data.get("cart", {})
     filtered_items = [
-        {"id": str(item["id"]), "name": item["name"], "price": item["price"], "quantity": cart.get(str(item["id"]), 0)}
+        {
+            "id": str(item["id"]),
+            "name": item["name"],
+            "price": item["price"],
+            "quantity": cart.get(str(item["id"]), 0),
+            "image": f"{IMG_PATH}/{selected_course}/{item['id']}.jpg"
+        }
         for item in all_items if item["course"] == selected_course
     ]
     return {"items": filtered_items}
@@ -93,7 +103,7 @@ async def confirm_order(call: types.CallbackQuery, widget, manager: DialogManage
     total_sum = 0
     worksheet = sheet
     for item_id, qty in cart.items():
-        worksheet.append_row([item_id, "Назва товару", "Ціна", qty, "Сума"])  # Замінити на реальні дані
+        worksheet.append_row([item_id, "Назва товару", "Ціна", qty, "Сума"])
 
     pdf_file = generate_pdf(order_id=user_id, order_data=cart)
 
@@ -111,10 +121,15 @@ async def confirm_order(call: types.CallbackQuery, widget, manager: DialogManage
 
 order_dialog = Dialog(
     Window(
-        Const("Оберіть курс:"),
-        Select(
-            Format("{item}"), items="courses", id="course_select",
-            item_id_getter=lambda item: item, on_click=select_course
+        Const("📚 Оберіть курс:"),
+        Column(
+            Row(
+                Select(
+                    Format("🎓 {item[name]}"), items="courses", id="course_select",
+                    item_id_getter=lambda item: item["short"], on_click=select_course
+                ),
+            ),
+            width=2,
         ),
         state=OrderDialog.select_course,
         getter=get_courses,
@@ -122,16 +137,18 @@ order_dialog = Dialog(
     Window(
         Const("🛒 Виберіть товари:"),
         Column(
-            Select(
-                Format("{item[name]} \n 💰 {item[price]} грн \n 🛍 {item[quantity]} шт"),
-                items="items",
-                id="item_select",
-                item_id_getter=lambda item: item["id"],
+            Row(
+                Select(
+                    Format("🖼 {item[name]} \n 💰 {item[price]} грн \n 🛍 {item[quantity]} шт"),
+                    items="items",
+                    id="item_select",
+                    item_id_getter=lambda item: item["id"],
+                ),
+                Button(Const("➖"), id="minus", on_click=change_quantity),
+                Button(Const("➕"), id="plus", on_click=change_quantity),
             ),
-            Button(Const("➖"), id="minus", on_click=change_quantity),
-            Button(Const("➕"), id="plus", on_click=change_quantity),
         ),
-        Button(Const("🛍 ОФОРМИТИ ЗАМОВЛЕННЯ"), id="confirm_order", on_click=confirm_order),
+        Button(Const("✅ ОФОРМИТИ ЗАМОВЛЕННЯ"), id="confirm_order", on_click=confirm_order, when="green"),
         state=OrderDialog.select_items,
         getter=get_items,
     )
