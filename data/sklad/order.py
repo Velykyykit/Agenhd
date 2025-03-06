@@ -34,6 +34,7 @@ async def get_courses(**kwargs):
 # Отримання товарів за курсом
 async def get_products(dialog_manager: DialogManager, **kwargs):
     selected_course = dialog_manager.dialog_data.get("selected_course", "❓Не вибрано")
+    cart = dialog_manager.dialog_data.setdefault("cart", {})
     
     rows = worksheet_sklad.get_all_records()
     products = [
@@ -41,7 +42,7 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
         for row in rows if row.get("course") == selected_course
     ]
 
-    return {"products": products, "selected_course": selected_course}
+    return {"products": products, "selected_course": selected_course, "cart": cart}
 
 # Обробник вибору курсу
 async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
