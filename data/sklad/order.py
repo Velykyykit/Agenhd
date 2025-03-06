@@ -3,7 +3,7 @@ import gspread
 import time
 from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
-from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Button, Row, Counter
+from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Button, Row
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 
@@ -65,9 +65,21 @@ async def select_course(callback: types.CallbackQuery, widget, manager: DialogMa
     await callback.answer(f"✅ Ви обрали курс: {item_id}")
     await manager.next()
 
+async def change_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, action: str):
+    """Збільшення або зменшення кількості товару."""
+    quantity = manager.dialog_data.get("quantity", 1)
+    if action == "increase":
+        quantity += 1
+    elif action == "decrease" and quantity > 1:
+        quantity -= 1
+    manager.dialog_data["quantity"] = quantity
+    await callback.answer()
+    await manager.dialog().update()
+
 async def add_to_cart(callback: types.CallbackQuery, widget, manager: DialogManager):
     selected_course = manager.dialog_data.get("selected_course", "❌ Невідомий курс")
-    await callback.answer(f"✅ Додано товари курсу {selected_course} у кошик!")
+    quantity = manager.dialog_data.get("quantity", 1)
+    await callback.answer(f"✅ Додано {quantity} шт. товару з курсу {selected_course} у кошик!")
 
 course_window = Window(
     Const("📚 Оберіть курс:"),
@@ -104,7 +116,9 @@ product_window = Window(
         hide_on_single_page=True
     ),
     Row(
-        Counter("quantity_counter", default=1, min_value=1, max_value=100),
+        Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease")),
+        Format("{dialog_data[quantity]}"),
+        Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase")),
     ),
     Row(
         Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
