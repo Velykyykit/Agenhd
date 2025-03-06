@@ -55,7 +55,8 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
     ]
 
     cache["products"][selected_course] = {"data": products, "timestamp": now}
-    dialog_manager.dialog_data["products"] = {item["id"]: 0 for item in products}  # Зберігаємо тільки ID товарів
+    dialog_manager.dialog_data["products"] = products  # Зберігаємо список товарів
+
     return {"products": products}
 
 async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
@@ -84,13 +85,19 @@ course_window = Window(
 
 product_window = Window(
     Format("📦 Товари курсу {dialog_data[selected_course]}:"),
-    *[
-        Row(
-            Button(Const("➖"), id=f"decrease_{item['id']}"),
-            Button(Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"), id=f"product_{item['id']}"),
-            Button(Const("➕"), id=f"increase_{item['id']}")
-        ) for item in cache["products"].get("data", {}).values()
-    ],
+    ScrollingGroup(
+        Select(
+            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"),
+            items="products",
+            id="product_select",
+            item_id_getter=lambda item: item["id"],
+            on_click=lambda c, w, m, item_id: c.answer(f"ℹ️ Ви вибрали товар {item_id}")
+        ),
+        width=1,
+        height=10,
+        id="products_scroller",
+        hide_on_single_page=True
+    ),
     Row(
         Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
     ),
