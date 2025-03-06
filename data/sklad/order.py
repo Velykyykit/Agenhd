@@ -50,11 +50,12 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
     
     rows = worksheet_sklad.get_all_records()
     products = [
-        {"id": row["id"], "name": row["name"], "price": row["price"], "quantity": 0}
+        {"id": str(row["id"]), "name": row["name"], "price": row["price"]}
         for row in rows if row["course"] == selected_course
     ]
     
     cache["products"][selected_course] = {"data": products, "timestamp": now}
+    dialog_manager.dialog_data["products"] = {item["id"]: 0 for item in products}  # Зберігаємо тільки ID товарів
     return {"products": products}
 
 async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
@@ -102,7 +103,7 @@ product_window = Window(
             Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"),
             items="products",
             id="product_select",
-            item_id_getter=lambda item: str(item["id"]),
+            item_id_getter=lambda item: item["id"],
             on_click=lambda c, w, m, item_id: c.answer(f"ℹ️ Ви вибрали товар {item_id}")
         ),
         width=1,
