@@ -48,6 +48,7 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
 async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
     selected_course = item_id
     manager.dialog_data["selected_course"] = selected_course
+    manager.dialog_data.setdefault("cart", {})  # Забезпечення існування cart
     logging.info(f"[COURSE SELECTED] Користувач {callback.from_user.id} обрав курс: {selected_course}")
     await callback.answer(f"✅ Ви обрали курс: {selected_course}")
     await manager.next()
