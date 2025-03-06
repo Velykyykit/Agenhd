@@ -23,7 +23,7 @@ async def get_courses(**kwargs):
     courses = worksheet.get_all_records(numericise_ignore=['all'], head=1)
     
     formatted_courses = [
-        {"name": course.get("course"), "short": course.get("short")} for course in courses
+        {"name": course["course"], "short": course["short"]} for course in courses
     ]
     return formatted_courses
 
@@ -44,8 +44,8 @@ async def get_items(dialog_manager: DialogManager, **kwargs):
     data = worksheet.get_all_records(numericise_ignore=['all'], head=1)
     
     items = [
-        {"id": item.get("id"), "name": item.get("name"), "price": item.get("price"), "quantity": 0}
-        for item in data if item.get("course") == selected_course
+        {"id": item["id"], "name": item["name"], "price": item["price"], "quantity": 0}
+        for item in data if item["course"] == selected_course
     ]
     return {"items": items}
 
@@ -76,13 +76,14 @@ order_dialog = Dialog(
     ),
     Window(
         Const("🛍️ Оберіть товари:"),
-        *[
+        Group(
             Row(
-                Button(Const("➖"), id=f"minus_{item['id']}", on_click=lambda c, w, m, i=item["id"]: change_quantity(c, w, m, i, -1)),
+                Button(Const("➖"), id="minus_{item[id]}", on_click=lambda c, w, m, item_id="{item[id]}": change_quantity(c, w, m, item_id, -1)),
                 Format("🏷️ {item[name]} - 💰 {item[price]} грн | 🛒 {item[quantity]}"),
-                Button(Const("➕"), id=f"plus_{item['id']}", on_click=lambda c, w, m, i=item["id"]: change_quantity(c, w, m, i, 1))
-            ) for item in get_items
-        ],
+                Button(Const("➕"), id="plus_{item[id]}", on_click=lambda c, w, m, item_id="{item[id]}": change_quantity(c, w, m, item_id, 1))
+            ),
+            width=1
+        ),
         Button(Const("✅ Оформити замовлення"), id="confirm_order", on_click=lambda c, w, m: m.switch_to(OrderDialog.confirm_order)),
         state=OrderDialog.select_items,
         getter=get_items,
