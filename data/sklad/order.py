@@ -4,7 +4,7 @@ import asyncio
 import gspread
 from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
-from aiogram_dialog.widgets.kbd import Button, Select, Cancel, ScrollingGroup
+from aiogram_dialog.widgets.kbd import Button, Select, Cancel, Column, Row
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 from fpdf import FPDF
@@ -22,7 +22,7 @@ class OrderDialog(StatesGroup):
 
 async def get_courses(**kwargs):
     gc = gspread.service_account(filename=CREDENTIALS_PATH)
-    sh = gc.open_by_key(SHEET_SKLAD)  # правильна таблиця
+    sh = gc.open_by_key(SHEET_SKLAD)
     worksheet = sh.worksheet("dictionary")
     courses = worksheet.col_values(1)
     return {"courses": courses}
@@ -34,6 +34,9 @@ async def get_items(dialog_manager: DialogManager, **kwargs):
     worksheet = sh.worksheet("SKLAD")
     all_items = worksheet.get_all_records()
     filtered_items = [item for item in all_items if item["course"] == selected_course]
+    cart = dialog_manager.dialog_data.get("cart", {})
+    for item in filtered_items:
+        item["quantity"] = cart.get(item["id"], 0)
     return {"items": filtered_items}
 
 async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
@@ -42,7 +45,7 @@ async def select_course(callback: types.CallbackQuery, widget, manager: DialogMa
 
 async def change_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
     cart = manager.dialog_data.setdefault("cart", {})
-    action = 1 if callback.data == "plus" else -1
+    action = 1 if callback.data.endswith("plus") else -1
     cart[item_id] = cart.get(item_id, 0) + action
     if cart[item_id] < 0:
         cart[item_id] = 0
@@ -109,21 +112,22 @@ async def confirm_order(call: types.CallbackQuery, widget, manager: DialogManage
 order_dialog = Dialog(
     Window(
         Const("Оберіть курс:"),
-        ScrollingGroup(
-            Select(Format("{item}"), items="courses", id="course_select", item_id_getter=lambda item: item, on_click=select_course),
-            width=4, height=1, id="scroll_courses_horizontal"
+        Select(
+            Format("{item}"), items="courses", id="course_select",
+            item_id_getter=lambda item: item, on_click=select_course
         ),
         state=OrderDialog.select_course,
         getter=get_courses,
     ),
     Window(
         Const("Виберіть товари:"),
-        ScrollingGroup(
-            Select(Format("{item[name]} - {item[price]} грн"), items="items", id="item_select", item_id_getter=lambda item: item["id"]),
-            width=1, height=10, id="scroll_items"
+        Column(
+            Format("{item[name]} - {item[price]} грн | Кількість: {item[quantity]}"),
+            Row(
+                Button(Const("➖"), id="{item[id]}_minus", on_click=change_quantity),
+                Button(Const("➕"), id="{item[id]}_plus", on_click=change_quantity),
+            ),
         ),
-        Button(Const("➕"), id="plus", on_click=change_quantity),
-        Button(Const("➖"), id="minus", on_click=change_quantity),
         Button(Const("Оформити замовлення"), id="confirm_order", on_click=confirm_order),
         state=OrderDialog.select_items,
         getter=get_items,
