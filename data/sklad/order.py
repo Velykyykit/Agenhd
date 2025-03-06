@@ -14,6 +14,7 @@ CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
 gc = gspread.service_account(filename=CREDENTIALS_PATH)
 sh = gc.open_by_key(SHEET_SKLAD)
 worksheet_courses = sh.worksheet("dictionary")
+worksheet_items = sh.worksheet("SKLAD")
 
 # Класи станів для діалогу
 class OrderSG(StatesGroup):
@@ -24,32 +25,51 @@ class OrderSG(StatesGroup):
 async def get_courses(**kwargs):
     courses = worksheet_courses.get_all_records()
     courses = [{"name": c["course"], "short": c["short"]} for c in courses][:20]  # Обмеження до 20 курсів
-
     col1 = courses[:10]  # Перший стовпець (10 курсів)
     col2 = courses[10:]  # Другий стовпець (10 курсів)
-
     return {"col1": col1, "col2": col2}
 
-# Обробник вибору курсу\nasync def select_course(callback: types.CallbackQuery, button: Button, manager: DialogManager):
-    await callback.answer("🚧 Ця функція ще в розробці!")
+# Отримання списку товарів для вибраного курсу
+async def get_items(dialog_manager: DialogManager, **kwargs):
+    selected_course = dialog_manager.dialog_data.get("selected_course")
+    if not selected_course:
+        return {"items": []}
+    all_items = worksheet_items.get_all_records()
+    items = [item for item in all_items if item["course"] == selected_course]
+    return {"items": items}
 
-# Вікно вибору курсу\ncourse_window = Window(
+# Обробник вибору курсу
+async def select_course(callback: types.CallbackQuery, button: Button, manager: DialogManager):
+    manager.dialog_data["selected_course"] = button.widget_id
+    await callback.answer("🚧 Функція ще в розробці!")
+    await manager.switch_to(OrderSG.select_item)
+
+# Вікно вибору курсу
+course_window = Window(
     Const("📚 Оберіть курс (тимчасова заглушка):"),
-    Group(
-        Select(
-            Format("🎓 {item[name]}"), items="col1", id="left_course_select",
-            item_id_getter=lambda item: item["short"],
-            on_click=select_course
+    Row(
+        Column(
+            Select(
+                Format("🎓 {item[name]}"),
+                items="col1",
+                id="left_course_select",
+                item_id_getter=lambda item: item["short"],
+                on_click=select_course
+            )
         ),
-        Select(
-            Format("🎓 {item[name]}"), items="col2", id="right_course_select",
-            item_id_getter=lambda item: item["short"],
-            on_click=select_course
-        ),
-        width=2
+        Column(
+            Select(
+                Format("🎓 {item[name]}"),
+                items="col2",
+                id="right_course_select",
+                item_id_getter=lambda item: item["short"],
+                on_click=select_course
+            )
+        )
     ),
     state=OrderSG.select_course,
-    getter=get_courses,
+    getter=get_courses
 )
 
-# Створення діалогу\norder_dialog = Dialog(course_window)
+# Створення діалогу
+order_dialog = Dialog(course_window)
