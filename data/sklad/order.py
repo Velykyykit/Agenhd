@@ -41,7 +41,7 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
 
     rows = worksheet_sklad.get_all_records()
     products = [
-        {"id": row["id"], "name": row["name"], "price": row["price"], "quantity": cart.get(str(row["id"]), 0)}
+        {"id": str(row["id"]), "name": row["name"], "price": row["price"], "quantity": cart.get(str(row["id"]), 0)}
         for row in rows if row["course"] == selected_course
     ]
 
@@ -67,6 +67,7 @@ async def update_quantity(callback: types.CallbackQuery, widget, manager: Dialog
     current_quantity = cart.get(item_id, 0)
     new_quantity = max(0, current_quantity + delta)  # Не дозволяємо значення менше 0
     cart[item_id] = new_quantity
+    await callback.answer(f"🔄 Кількість оновлено: {new_quantity}")
     await manager.show()  # Оновлення вікна
 
 # Вікно вибору курсу
@@ -96,10 +97,10 @@ product_window = Window(
         Row(
             Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"),
             Button(Const("➖"), id=lambda item: f"minus_{item['id']}",
-                   on_click=lambda c, w, m: update_quantity(c, w, m, str(c.data.split("_")[1]), -1)),
+                   on_click=lambda c, w, m, item_id=item['id']: update_quantity(c, w, m, item_id, -1)),
             Format("{item[quantity]}"),
             Button(Const("➕"), id=lambda item: f"plus_{item['id']}",
-                   on_click=lambda c, w, m: update_quantity(c, w, m, str(c.data.split("_")[1]), 1)),
+                   on_click=lambda c, w, m, item_id=item['id']: update_quantity(c, w, m, item_id, 1)),
         ),
         items="products",
         id="products_scroller",
@@ -114,3 +115,6 @@ product_window = Window(
     state=OrderSG.show_products,
     getter=get_products
 )
+
+# Створюємо діалог
+order_dialog = Dialog(course_window, product_window)
