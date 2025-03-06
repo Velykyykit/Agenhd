@@ -3,7 +3,7 @@ import gspread
 import time
 from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
-from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Button, Row
+from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Button, Row, Counter
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 
@@ -27,6 +27,7 @@ cache = {
 class OrderSG(StatesGroup):
     select_course = State()
     show_products = State()
+    select_quantity = State()
 
 async def get_courses(**kwargs):
     """Отримує список курсів з кешу або Google Sheets."""
@@ -101,6 +102,9 @@ product_window = Window(
         height=10,
         id="products_scroller",
         hide_on_single_page=True
+    ),
+    Row(
+        Counter("quantity_counter", default=1, min_value=1, max_value=100, step=1),
     ),
     Row(
         Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
