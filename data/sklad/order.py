@@ -135,7 +135,7 @@ quantity_window = Window(
     Format("🖼 Фото товару тут\n📦 Товар: {dialog_data[selected_product]}"),
     Row(
         Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease")),
-        Format(" {dialog_data[quantity]} "),
+        Button(Format("{dialog_data[quantity]}"), id="quantity_display"),  # Виправлено
         Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase")),
     ),
     Row(
