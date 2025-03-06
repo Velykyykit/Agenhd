@@ -91,7 +91,7 @@ product_window = Window(
                 Button(Const("⠀"), id=f"empty_left_{item['id']}"),  # Ліва пустая кнопка
                 Button(Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"), id=f"product_{item['id']}"),
                 Button(Const("⠀"), id=f"empty_right_{item['id']}")  # Права пустая кнопка
-            ) for item in dialog_manager.dialog_data.get("products", [])
+            ) for item in kwargs.get("products", [])  # Використовуємо `kwargs`
         ],
         id="products_scroller",
         width=1,
@@ -102,7 +102,7 @@ product_window = Window(
         Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
     ),
     state=OrderSG.show_products,
-    getter=get_products
+    getter=get_products  # Тепер дані передаються через getter
 )
 
 order_dialog = Dialog(course_window, product_window)
