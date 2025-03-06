@@ -27,7 +27,6 @@ cache = {
 class OrderSG(StatesGroup):
     select_course = State()
     show_products = State()
-    select_quantity = State()
 
 async def get_courses(**kwargs):
     """Отримує список курсів з кешу або Google Sheets."""
@@ -45,7 +44,7 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
     """Отримує список товарів для вибраного курсу з кешу або Google Sheets."""
     selected_course = dialog_manager.dialog_data.get("selected_course", None)
     if not selected_course:
-        return {"products": []}
+        return {"products": "❌ Товари не знайдено."}
     
     now = time.time()
     if selected_course in cache["products"] and now - cache["products"][selected_course]["timestamp"] < CACHE_EXPIRY:
@@ -57,12 +56,12 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
         for row in rows if row["course"] == selected_course
     ]
     
-    cache["products"][selected_course] = {"data": products, "timestamp": now}
+    cache["products"][selected_course] = {"data": "\n".join(products), "timestamp": now}
     return {"products": "\n".join(products)}
 
 async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
+    """Перехід до списку товарів після вибору курсу."""
     manager.dialog_data["selected_course"] = item_id
-    manager.dialog_data["quantity"] = 1  # Початкове значення кількості
     await callback.answer(f"✅ Ви обрали курс: {item_id}")
     await manager.next()
 
@@ -76,7 +75,7 @@ course_window = Window(
             item_id_getter=lambda item: item["short"],
             on_click=select_course
         ),
-        width=2,
+        width=2,  # Два курси в одному ряду
         height=10,
         id="courses_scroller",
         hide_on_single_page=True
