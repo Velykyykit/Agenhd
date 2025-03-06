@@ -25,7 +25,7 @@ async def get_courses(**kwargs):
     gc = gspread.service_account(filename=CREDENTIALS_PATH)
     sh = gc.open_by_key(SHEET_SKLAD)
     worksheet = sh.worksheet("dictionary")
-    courses = worksheet.get_all_records()
+    courses = worksheet.get_all_records(numericise_ignore=['all'], head=1)
     formatted_courses = [
         {"name": course["A"], "short": course["B"]} for course in courses
     ]
