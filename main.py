@@ -23,7 +23,7 @@ from menu.keyboards import get_phone_keyboard, get_restart_keyboard
 # Замість DialogRegistry імпортуємо setup_dialogs і StartMode
 from aiogram_dialog import setup_dialogs, StartMode
 from aiogram_dialog import DialogManager  # Для анотації типів
-from data.sklad.order import order_dialog  # Ваш діалог
+from data.sklad.order import order_dialog, OrderSG  # Ваш діалог
 
 # Перегляд замовлень («Для мене»)
 from data.For_me.me import show_my_orders
