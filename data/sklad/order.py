@@ -106,8 +106,8 @@ product_window = Window(
     ),
 
     Group(
-        Button(Const("➖"), id=lambda item: f"minus_{item['id']}", on_click=update_quantity),
-        Button(Const("➕"), id=lambda item: f"plus_{item['id']}", on_click=update_quantity),
+        Button(Const("➖"), id="minus_button", on_click=update_quantity),
+        Button(Const("➕"), id="plus_button", on_click=update_quantity),
         width=2
     ),
 
