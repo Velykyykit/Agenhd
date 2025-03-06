@@ -118,7 +118,7 @@ product_window = Window(
     ),
     Row(
         Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease")),
-        DynamicText(lambda data, manager: f"{manager.dialog_data.get('quantity', 1)}"),
+        Format("{dialog_data[quantity]}")}"),
         Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase")),
     ),
     Row(
