@@ -38,7 +38,7 @@ course_window = Window(
             Format("🎓 {item[name]}"),
             items="courses",
             id="course_select",
-            item_id_getter=lambda item: item["short"],
+            item_id_getter=lambda item: item["course"],
             on_click=select_course
         ),
         width=2,  # 2 стовпці
