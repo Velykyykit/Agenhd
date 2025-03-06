@@ -42,49 +42,25 @@ async def get_courses(**kwargs):
 async def get_products(dialog_manager: DialogManager, **kwargs):
     selected_course = dialog_manager.dialog_data.get("selected_course", None)
     if not selected_course:
-        return {"products": "❌ Товари не знайдено.", "quantity": 0}
+        return {"products": []}
     
     now = time.time()
     if selected_course in cache["products"] and now - cache["products"][selected_course]["timestamp"] < CACHE_EXPIRY:
-        return {
-            "products": cache["products"][selected_course]["data"],
-            "quantity": dialog_manager.dialog_data.get("quantity", 0)  # Початкова кількість = 0
-        }
+        return {"products": cache["products"][selected_course]["data"]}
     
     rows = worksheet_sklad.get_all_records()
     products = [
-        f"🆔 {row['id']} | {row['name']} - 💰 {row['price']} грн"
+        {"id": row["id"], "name": row["name"], "price": row["price"]}
         for row in rows if row["course"] == selected_course
     ]
     
-    cache["products"][selected_course] = {"data": "\n".join(products), "timestamp": now}
-    
-    # Завжди встановлюємо `quantity = 0`
-    dialog_manager.dialog_data["quantity"] = dialog_manager.dialog_data.get("quantity", 0)
+    cache["products"][selected_course] = {"data": products, "timestamp": now}
+    return {"products": products}
 
-    return {
-        "products": "\n".join(products),
-        "quantity": dialog_manager.dialog_data["quantity"]
-    }
-
-async def change_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, action: str):
-    """Збільшення або зменшення кількості товару."""
-    quantity = manager.dialog_data.get("quantity", 0)
-    
-    if action == "increase":
-        quantity += 1
-    elif action == "decrease" and quantity > 0:
-        quantity -= 1
-    
-    manager.dialog_data["quantity"] = quantity
-    await callback.answer()
-    await manager.dialog().update()
-
-async def add_to_cart(callback: types.CallbackQuery, widget, manager: DialogManager):
-    """Додає вибраний товар у кошик."""
-    selected_course = manager.dialog_data.get("selected_course", "❌ Невідомий курс")
-    quantity = manager.dialog_data.get("quantity", 0)
-    await callback.answer(f"✅ Додано {quantity} шт. товару з курсу {selected_course} у кошик!")
+async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
+    manager.dialog_data["selected_course"] = item_id
+    await callback.answer(f"✅ Ви обрали курс: {item_id}")
+    await manager.next()
 
 course_window = Window(
     Const("📚 Оберіть курс:"),
@@ -94,7 +70,7 @@ course_window = Window(
             items="courses",
             id="course_select",
             item_id_getter=lambda item: item["short"],
-            on_click=lambda c, w, m, item_id: m.dialog_data.update(selected_course=item_id) or m.next()
+            on_click=select_course
         ),
         width=2,
         height=10,
@@ -106,19 +82,23 @@ course_window = Window(
 )
 
 product_window = Window(
-    Format("📦 Товари курсу {dialog_data[selected_course]}:\n\n{products}"),
-    
-    Row(
-        Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease")),
-        Button(Format("{dialog_data[quantity]}"), id="quantity_display"),
-        Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase")),
+    Format("📦 Товари курсу {dialog_data[selected_course]}:"),
+    ScrollingGroup(
+        Select(
+            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"),
+            items="products",
+            id="product_select",
+            item_id_getter=lambda item: str(item["id"]),
+            on_click=lambda c, w, m, item_id: c.answer(f"ℹ️ Ви вибрали товар {item_id}")
+        ),
+        width=1,
+        height=10,
+        id="products_scroller",
+        hide_on_single_page=True
     ),
-    
     Row(
-        Button(Const("✅ Додати в кошик"), id="confirm_quantity", on_click=add_to_cart),
         Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
     ),
-    
     state=OrderSG.show_products,
     getter=get_products
 )
