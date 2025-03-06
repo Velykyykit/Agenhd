@@ -4,7 +4,7 @@ import asyncio
 import gspread
 from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
-from aiogram_dialog.widgets.kbd import Button, Select, Cancel, Grid
+from aiogram_dialog.widgets.kbd import Button, Select, Cancel, Column
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 from fpdf import FPDF
@@ -121,7 +121,7 @@ order_dialog = Dialog(
     ),
     Window(
         Const("🛒 Виберіть товари:"),
-        Grid(
+        Column(
             Select(
                 Format("{item[name]} \n 💰 {item[price]} грн \n 🛍 {item[quantity]} шт"),
                 items="items",
@@ -130,7 +130,6 @@ order_dialog = Dialog(
             ),
             Button(Const("➖"), id="minus", on_click=change_quantity),
             Button(Const("➕"), id="plus", on_click=change_quantity),
-            width=3,  # Кількість товарів у ряді
         ),
         Button(Const("🛍 ОФОРМИТИ ЗАМОВЛЕННЯ"), id="confirm_order", on_click=confirm_order),
         state=OrderDialog.select_items,
