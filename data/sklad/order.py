@@ -99,9 +99,9 @@ product_window = Window(
         id="products_group"
     ),
     Group(
-        Button(Const("➖"), id=lambda item: f"minus_{item['id']}", on_click=update_quantity),
-        Format(" {dialog_data[cart][item[id]] if item[id] in dialog_data.get('cart', {}) else 0} "),
-        Button(Const("➕"), id=lambda item: f"plus_{item['id']}", on_click=update_quantity),
+        Button(Const("➖"), id="minus_{item[id]}", on_click=update_quantity),
+        Format("{dialog_data[cart].get(item[id], 0)}"),
+        Button(Const("➕"), id="plus_{item[id]}", on_click=update_quantity),
         width=3
     ),
     Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
