@@ -27,7 +27,7 @@ async def get_courses(**kwargs):
     worksheet = sh.worksheet("dictionary")
     courses = worksheet.get_all_records(numericise_ignore=['all'], head=1)
     formatted_courses = [
-        {"name": course["A"], "short": course["B"]} for course in courses
+        {"name": course.get("course"), "short": course.get("short")} for course in courses
     ]
     return {"courses": formatted_courses}
 
