@@ -41,7 +41,7 @@ async def get_courses_in_columns(**kwargs):
 order_dialog = Dialog(
     Window(
         Const("📚 Оберіть курс:"),
-        Row(width=2,
+        Row(
             Column(
                 Select(
                     Format("🎓 {item[name]}"), items="left_courses", id="left_course_select",
