@@ -77,7 +77,7 @@ async def change_quantity(callback: types.CallbackQuery, widget, manager: Dialog
 
     manager.dialog_data["quantity"] = quantity
     await callback.answer()
-    await manager.dialog().update()
+    await manager.dialog().update()  # Оновлюємо інтерфейс
 
 async def add_to_cart(callback: types.CallbackQuery, widget, manager: DialogManager):
     selected_course = manager.dialog_data.get("selected_course", "❌ Невідомий курс")
@@ -121,7 +121,7 @@ product_window = Window(
     
     Row(
     Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease")),
-    Button(Format("{dialog_data[quantity]}"), id="quantity_display"),
+    Button(Format("{dialog_data[quantity]}"), id="quantity_display", on_click=lambda c, w, m: c.answer()),  # Просто показує значення
     Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase")),
 ),
     
