@@ -29,7 +29,7 @@ async def get_courses_in_columns(**kwargs):
 
 # Функція отримання товарів для вибраного курсу
 async def get_items(dialog_manager: DialogManager, **kwargs):
-    selected_course = dialog_manager.dialog_data.get("selected_course")
+    selected_course = dialog_manager.dialog_data.get("selected_course", "").strip()
     if not selected_course:
         return {"items": []}
 
@@ -39,8 +39,13 @@ async def get_items(dialog_manager: DialogManager, **kwargs):
     data = worksheet.get_all_records()
 
     filtered_items = [
-        {"id": str(item["id"]), "name": item["name"], "price": item["price"], "quantity": 0}
-        for item in data if item["course"].strip() == selected_course.strip()
+        {
+            "id": str(item["id"]),
+            "name": item["name"],
+            "price": item["price"],
+            "quantity": 0
+        }
+        for item in data if item["course"].strip() == selected_course
     ]
 
     return {"items": filtered_items}
@@ -59,12 +64,12 @@ order_dialog = Dialog(
             Select(
                 Format("🎓 {item[name]}"), items="left_courses", id="left_course_select",
                 item_id_getter=lambda item: item["short"],
-                on_click=lambda c, w, m, item_id: m.start(OrderDialog.select_items, {"selected_course": item_id})
+                on_click=lambda c, w, m, item_id: m.dialog_data.update(selected_course=item_id) or m.switch_to(OrderDialog.select_items)
             ),
             Select(
                 Format("🎓 {item[name]}"), items="right_courses", id="right_course_select",
                 item_id_getter=lambda item: item["short"],
-                on_click=lambda c, w, m, item_id: m.start(OrderDialog.select_items, {"selected_course": item_id})
+                on_click=lambda c, w, m, item_id: m.dialog_data.update(selected_course=item_id) or m.switch_to(OrderDialog.select_items)
             ),
             width=2
         ),
@@ -80,13 +85,13 @@ order_dialog = Dialog(
                 item_id_getter=lambda item: item["id"],
             ),
             Select(
-                Format("➖"), id=lambda item: f"minus_{item['id']}",
+                Format("➖"), id="minus_button",
                 items="items",
                 item_id_getter=lambda item: item["id"],
                 on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, -1),
             ),
             Select(
-                Format("➕"), id=lambda item: f"plus_{item['id']}",
+                Format("➕"), id="plus_button",
                 items="items",
                 item_id_getter=lambda item: item["id"],
                 on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, 1),
