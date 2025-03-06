@@ -59,6 +59,12 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
 
     return {"products": products}
 
+async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
+    """Обробка вибору курсу"""
+    manager.dialog_data["selected_course"] = item_id
+    await callback.answer(f"✅ Ви обрали курс: {item_id}")
+    await manager.next()
+
 def get_product_rows(data):
     """Генерує рядки з кнопками товарів"""
     products = data.get("products", [])
@@ -78,7 +84,7 @@ course_window = Window(
             items="courses",
             id="course_select",
             item_id_getter=lambda item: item["short"],
-            on_click=select_course
+            on_click=select_course  # ❗ Тепер функція вже оголошена вище
         ),
         width=2,
         height=10,
