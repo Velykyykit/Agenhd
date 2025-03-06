@@ -96,11 +96,11 @@ product_window = Window(
     ScrollingGroup(
         Row(
             Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"),
-            Button(Const("➖"), id=lambda item: f"minus_{item['id']}",
-                   on_click=lambda c, w, m: update_quantity(c, w, m, item['id'], -1)),
+            Button(Const("➖"), id=lambda i: f"minus_{i['id']}",
+                   on_click=lambda c, w, m, item_id=f"{w.widget_id.split('_')[-1]}": update_quantity(c, w, m, item_id, -1)),
             Format("{item[quantity]}"),
-            Button(Const("➕"), id=lambda item: f"plus_{item['id']}",
-                   on_click=lambda c, w, m: update_quantity(c, w, m, item['id'], 1)),
+            Button(Const("➕"), id=lambda i: f"plus_{i['id']}",
+                   on_click=lambda c, w, m, item_id=f"{w.widget_id.split('_')[-1]}": update_quantity(c, w, m, item_id, 1)),
         ),
         items="products",
         id="products_scroller",
