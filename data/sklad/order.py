@@ -4,8 +4,13 @@ from aiogram_dialog.widgets.kbd import Select, Button, Row, Column
 from aiogram_dialog.widgets.text import Const
 from aiogram_dialog.manager.manager import DialogManager
 from aiogram import types
+from aiogram.fsm.state import StatesGroup, State  # Додано коректне визначення станів
 
 logger = logging.getLogger(__name__)
+
+# Визначення станів для діалогу
+class OrderDialog(StatesGroup):
+    select_course = State()  # Стан для вибору курсу
 
 # Дві таблиці Google Sheets
 SHEET_DICTIONARY = "dictionary"
@@ -44,7 +49,7 @@ order_dialog = Dialog(
                 )
             )
         ),
-        state="OrderDialog:select_course",
+        state=OrderDialog.select_course,  # Виправлено визначення стану
         getter=get_courses  # Виклик функції отримання курсів
     )
 )
