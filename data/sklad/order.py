@@ -3,7 +3,7 @@ import gspread
 import time
 from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
-from aiogram_dialog.widgets.kbd import Button, Row
+from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Button, Row
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 
@@ -53,12 +53,12 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
     
     rows = worksheet_sklad.get_all_records()
     products = [
-        {"id": row["id"], "name": row["name"], "price": row["price"]}
+        f"🆔 {row['id']} | {row['name']} - 💰 {row['price']} грн"
         for row in rows if row["course"] == selected_course
     ]
     
     cache["products"][selected_course] = {"data": products, "timestamp": now}
-    return {"products": products}
+    return {"products": "\n".join(products)}
 
 async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
     manager.dialog_data["selected_course"] = item_id
@@ -66,9 +66,27 @@ async def select_course(callback: types.CallbackQuery, widget, manager: DialogMa
     await callback.answer(f"✅ Ви обрали курс: {item_id}")
     await manager.next()
 
+course_window = Window(
+    Const("📚 Оберіть курс:"),
+    ScrollingGroup(
+        Select(
+            Format("🎓 {item[name]}"),
+            items="courses",
+            id="course_select",
+            item_id_getter=lambda item: item["short"],
+            on_click=select_course
+        ),
+        width=2,
+        height=10,
+        id="courses_scroller",
+        hide_on_single_page=True
+    ),
+    state=OrderSG.select_course,
+    getter=get_courses
+)
+
 product_window = Window(
-    Format("📦 Товари курсу {dialog_data[selected_course]}:\n\n" +
-           "\n".join(["{item[id]} | {item[name]} - 💰 {item[price]} грн" for item in "products"])),
+    Format("📦 Товари курсу {dialog_data[selected_course]}:\n\n{products}"),
     Row(
         Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
     ),
@@ -76,4 +94,4 @@ product_window = Window(
     getter=get_products
 )
 
-order_dialog = Dialog(product_window)
+order_dialog = Dialog(course_window, product_window)
