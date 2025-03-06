@@ -4,20 +4,20 @@ from aiogram_dialog.widgets.kbd import Select, Button, Row, Column
 from aiogram_dialog.widgets.text import Const
 from aiogram_dialog.manager.manager import DialogManager
 from aiogram import types
-from aiogram.fsm.state import StatesGroup, State  # Додано коректне визначення станів
 
 logger = logging.getLogger(__name__)
-
-# Визначення станів для діалогу
-class OrderDialog(StatesGroup):
-    select_course = State()  # Стан для вибору курсу
 
 # Дві таблиці Google Sheets
 SHEET_DICTIONARY = "dictionary"
 
 async def get_courses(dialog_manager: DialogManager, **kwargs):
-    """Отримання списку курсів із таблиці"""
-    courses = await dialog_manager.middleware_data["gspread_client"].get_data(SHEET_DICTIONARY)
+    """Отримання списку курсів із таблиці Google Sheets"""
+    gspread_client = dialog_manager.middleware_data.get("gspread_client")  # Отримання клієнта
+    if not gspread_client:
+        logger.error("[ERROR] gspread_client не знайдено у middleware_data")
+        return {"courses": []}  # Повертаємо пустий список, щоб не було помилки
+
+    courses = await gspread_client.get_data(SHEET_DICTIONARY)
     courses = [{"name": course["course"], "short": course["short"]} for course in courses[:20]]  # Не більше 20 курсів
     return {"courses": courses}
 
@@ -49,7 +49,7 @@ order_dialog = Dialog(
                 )
             )
         ),
-        state=OrderDialog.select_course,  # Виправлено визначення стану
+        state="OrderDialog:select_course",
         getter=get_courses  # Виклик функції отримання курсів
     )
 )
