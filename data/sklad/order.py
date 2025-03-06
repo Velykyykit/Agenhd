@@ -116,11 +116,13 @@ product_window = Window(
         id="products_scroller",
         hide_on_single_page=True
     ),
+    
     Row(
-        Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease")),
-        Format("{dialog_data[quantity]}")}"),
-        Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase")),
-    ),
+    Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease")),
+    Format("{dialog_data[quantity]}"),
+    Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase")),
+),
+    
     Row(
         Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
         Button(Const("🛒 Додати в кошик"), id="add_to_cart", on_click=add_to_cart),
