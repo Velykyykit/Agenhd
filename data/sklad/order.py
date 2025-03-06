@@ -112,7 +112,7 @@ product_window = Window(
     ),
     Row(
         Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease", manager.dialog_data.get("selected_product", "0"))),
-        Format("{dialog_data[products].get(dialog_data[selected_product], 0)}"),
+        Button(Format("{dialog_data[products].get(manager.dialog_data.get('selected_product', '0'), 0)}"), id="quantity_display"),
         Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase", manager.dialog_data.get("selected_product", "0"))),
     ),
     Row(
