@@ -77,29 +77,29 @@ order_dialog = Dialog(
         getter=get_courses_in_columns,
     ),
     Window(
-        Const("🛍️ Оберіть товари:"),
-        Group(
-            Select(
-                Format("🏷️ {item[name]} - 💰 {item[price]} грн | 🛒 {cart.get(item[id], 0)}"),
-                items="items", id="item_select",
-                item_id_getter=lambda item: item["id"],
-            ),
-            Select(
-                Format("➖"), id="minus_button",
-                items="items",
-                item_id_getter=lambda item: item["id"],
-                on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, -1),
-            ),
-            Select(
-                Format("➕"), id="plus_button",
-                items="items",
-                item_id_getter=lambda item: item["id"],
-                on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, 1),
-            ),
-            width=2
+    Const("🛍️ Оберіть товари:"),
+    Group(
+        Select(
+            Format("🏷️ {item[name]} - 💰 {item[price]} грн | 🛒 {cart.get(item[id], 0)}"),
+            items="items", id="item_select",
+            item_id_getter=lambda item: item["id"],
         ),
-        Button(Const("✅ Оформити замовлення"), id="confirm_order", on_click=lambda c, w, m: m.switch_to(OrderDialog.confirm_order)),
-        state=OrderDialog.select_items,
-        getter=get_items,
-    )
+        Select(
+            Format("➖"), id="minus_button",
+            items="items",
+            item_id_getter=lambda item: item["id"],
+            on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, -1),
+        ),
+        Select(
+            Format("➕"), id="plus_button",
+            items="items",
+            item_id_getter=lambda item: item["id"],
+            on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, 1),
+        ),
+        width=2
+    ),
+    Button(Const("✅ Оформити замовлення"), id="confirm_order", on_click=lambda c, w, m: m.switch_to(OrderDialog.confirm_order)),
+    state=OrderDialog.select_items,
+    getter=get_items,
+)
 )
