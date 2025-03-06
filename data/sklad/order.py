@@ -102,10 +102,10 @@ product_window = Window(
     ScrollingGroup(
         Row(
             Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"),
-            Button(Const("➖"), id=lambda item: f"minus_{item['id']}",
+            Button(Const("➖"), id=Format("minus_{item[id]}"),
                    on_click=lambda c, w, m: update_quantity(c, w, m, -1)),
             Format("{item[quantity]}"),
-            Button(Const("➕"), id=lambda item: f"plus_{item['id']}",
+            Button(Const("➕"), id=Format("plus_{item[id]}"),
                    on_click=lambda c, w, m: update_quantity(c, w, m, 1)),
         ),
         items="products",
