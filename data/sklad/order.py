@@ -33,18 +33,15 @@ async def get_courses(**kwargs):
 
 # Отримання товарів за курсом
 async def get_products(dialog_manager: DialogManager, **kwargs):
-    selected_course = dialog_manager.dialog_data.get("selected_course", None)
-
-    if not selected_course:
-        return {"products": []}
-
+    selected_course = dialog_manager.dialog_data.get("selected_course", "❓Не вибрано")
+    
     rows = worksheet_sklad.get_all_records()
     products = [
         {"id": str(row["id"]), "name": row["name"], "price": row["price"]}
-        for row in rows if row["course"] == selected_course
+        for row in rows if row.get("course") == selected_course
     ]
 
-    return {"products": products}
+    return {"products": products, "selected_course": selected_course}
 
 # Обробник вибору курсу
 async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
@@ -91,11 +88,11 @@ course_window = Window(
 
 # Вікно виводу товарів
 product_window = Window(
-    Format("📦 Товари курсу {dialog_data[selected_course] if dialog_data.get('selected_course') else '❓Не вибрано'}:"),
-
+    Format("📦 Товари курсу {selected_course}:"),
+    
     ScrollingGroup(
         Select(
-            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн | 📦 {dialog_data['cart'].get(item['id'], 0)} шт"),
+            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн | 📦 {dialog_data[cart].get(item[id], 0)} шт"),
             items="products",
             id="product_select",
             item_id_getter=lambda item: item["id"],
