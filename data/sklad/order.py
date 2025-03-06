@@ -14,10 +14,12 @@ CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
 gc = gspread.service_account(filename=CREDENTIALS_PATH)
 sh = gc.open_by_key(SHEET_SKLAD)
 worksheet_courses = sh.worksheet("dictionary")
+worksheet_items = sh.worksheet("SKLAD")
 
 # Класи станів для діалогу
 class OrderSG(StatesGroup):
     select_course = State()
+    select_item = State()
 
 # Отримання списку курсів (дві колонки по 10)
 async def get_courses(**kwargs):
@@ -29,10 +31,21 @@ async def get_courses(**kwargs):
 
     return {"col1": col1, "col2": col2}
 
-# Обробник натискання на курс
+# Отримання товарів для вибраного курсу
+async def get_items(dialog_manager: DialogManager, **kwargs):
+    selected_course = dialog_manager.dialog_data.get("selected_course")
+    if not selected_course:
+        return {"items": []}
+
+    all_items = worksheet_items.get_all_records()
+    items = [item for item in all_items if item["course"] == selected_course]
+
+    return {"items": items}
+
+# Обробник вибору курсу
 async def select_course(callback: types.CallbackQuery, button: Button, manager: DialogManager):
     manager.dialog_data["selected_course"] = button.widget_id
-    await manager.done()
+    await manager.switch_to(OrderSG.select_item)
 
 # Вікно вибору курсу
 course_window = Window(
@@ -57,5 +70,19 @@ course_window = Window(
     getter=get_courses,
 )
 
+# Вікно вибору товарів
+item_window = Window(
+    Const("🛍 Виберіть товари:"),
+    Column(
+        Select(
+            Format("{item[name]} - {item[price]} грн"),
+            items="items", id="item_select",
+            item_id_getter=lambda item: item["id"]
+        ),
+    ),
+    state=OrderSG.select_item,
+    getter=get_items,
+)
+
 # Створення діалогу
-order_dialog = Dialog(course_window)
+order_dialog = Dialog(course_window, item_window)
