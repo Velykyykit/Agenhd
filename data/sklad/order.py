@@ -29,7 +29,7 @@ async def get_courses_in_columns(**kwargs):
 
 # Функція отримання товарів для вибраного курсу
 async def get_items(dialog_manager: DialogManager, **kwargs):
-    selected_course = dialog_manager.start_data.get("selected_course")
+    selected_course = dialog_manager.dialog_data.get("selected_course")
     if not selected_course:
         return {"items": []}
 
@@ -38,12 +38,12 @@ async def get_items(dialog_manager: DialogManager, **kwargs):
     worksheet = sh.worksheet("SKLAD")
     data = worksheet.get_all_records()
 
-    return {
-        "items": [
-            {"id": item["id"], "name": item["name"], "price": item["price"], "quantity": 0}
-            for item in data if item["course"] == selected_course
-        ]
-    }
+    filtered_items = [
+        {"id": str(item["id"]), "name": item["name"], "price": item["price"], "quantity": 0}
+        for item in data if item["course"].strip() == selected_course.strip()
+    ]
+
+    return {"items": filtered_items}
 
 # Функція зміни кількості товарів
 async def change_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str, change: int):
@@ -75,18 +75,18 @@ order_dialog = Dialog(
         Const("🛍️ Оберіть товари:"),
         Group(
             Select(
-                Format("🏷️ {item[name]} - 💰 {item[price]} грн | 🛒 {cart[item[id]]}"),
+                Format("🏷️ {item[name]} - 💰 {item[price]} грн | 🛒 {cart.get(item[id], 0)}"),
                 items="items", id="item_select",
                 item_id_getter=lambda item: item["id"],
             ),
             Select(
-                Format("➖"), id="minus_item",
+                Format("➖"), id=lambda item: f"minus_{item['id']}",
                 items="items",
                 item_id_getter=lambda item: item["id"],
                 on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, -1),
             ),
             Select(
-                Format("➕"), id="plus_item",
+                Format("➕"), id=lambda item: f"plus_{item['id']}",
                 items="items",
                 item_id_getter=lambda item: item["id"],
                 on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, 1),
