@@ -3,7 +3,7 @@ import gspread
 import logging
 from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
-from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Button
+from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Button, Row
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 
@@ -59,6 +59,12 @@ async def select_course(callback: types.CallbackQuery, widget, manager: DialogMa
     # Перехід до списку товарів
     await manager.next()
 
+# Обробник кнопки "🛒 Додати в кошик"
+async def add_to_cart(callback: types.CallbackQuery, widget, manager: DialogManager):
+    selected_course = manager.dialog_data.get("selected_course", "❌ Невідомий курс")
+    logging.info(f"[CART] Користувач {callback.from_user.id} натиснув '🛒 Додати в кошик' для курсу: {selected_course}")
+    await callback.answer(f"✅ Додано товари курсу {selected_course} у кошик!")
+
 # Вікно вибору курсу
 course_window = Window(
     Const("📚 Оберіть курс:"),
@@ -95,7 +101,10 @@ product_window = Window(
         id="products_scroller",
         hide_on_single_page=True  
     ),
-    Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
+    Row(
+        Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
+        Button(Const("🛒 Додати в кошик"), id="add_to_cart", on_click=add_to_cart),
+    ),
     state=OrderSG.show_products,
     getter=get_products
 )
