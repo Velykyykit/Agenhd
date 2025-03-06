@@ -86,7 +86,7 @@ product_window = Window(
     Format("📦 Товари курсу {dialog_data[selected_course]}:"),
     ScrollingGroup(
         Select(
-            Format("{item[id]}. {item[name]} - 💰 {item[price]} грн"),
+            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"),
             items="products",
             id="product_select",
             item_id_getter=lambda item: item["id"],
@@ -98,7 +98,9 @@ product_window = Window(
         hide_on_single_page=True
     ),
     Row(
+        Button(Const("➖"), id="decrease_dummy"),
         Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
+        Button(Const("➕"), id="increase_dummy"),
     ),
     state=OrderSG.show_products,
     getter=get_products
