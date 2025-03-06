@@ -1,10 +1,14 @@
 import os
 import gspread
+import logging
 from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
 from aiogram_dialog.widgets.kbd import ScrollingGroup, Select
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
+
+# Налаштування логування (Railway)
+logging.basicConfig(level=logging.INFO)
 
 # Конфігурація Google Sheets
 SHEET_SKLAD = os.getenv("SHEET_SKLAD")
@@ -25,10 +29,15 @@ async def get_courses(**kwargs):
     courses = [{"name": row["course"], "short": row["short"]} for row in rows][:20]
     return {"courses": courses}
 
-# Обробник вибору курсу
+# Обробник вибору курсу з логуванням
 async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
-    manager.dialog_data["selected_course"] = item_id
-    await callback.answer(f"Ви обрали курс: {item_id}")
+    selected_course = item_id
+    manager.dialog_data["selected_course"] = selected_course
+
+    # 🔥 Запис у логи Railway
+    logging.info(f"[COURSE SELECTED] Користувач {callback.from_user.id} обрав курс: {selected_course}")
+
+    await callback.answer(f"✅ Ви обрали курс: {selected_course}")
 
 # Вікно вибору курсу (без кнопок прокрутки)
 course_window = Window(
@@ -38,7 +47,7 @@ course_window = Window(
             Format("🎓 {item[name]}"),
             items="courses",
             id="course_select",
-            item_id_getter=lambda item: item["course"],
+            item_id_getter=lambda item: item["short"],
             on_click=select_course
         ),
         width=2,  # 2 стовпці
