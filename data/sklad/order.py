@@ -63,6 +63,25 @@ async def select_course(callback: types.CallbackQuery, widget, manager: DialogMa
     await callback.answer(f"✅ Ви обрали курс: {item_id}")
     await manager.next()
 
+course_window = Window(
+    Const("📚 Оберіть курс:"),
+    ScrollingGroup(
+        Select(
+            Format("🎓 {item[name]}"),
+            items="courses",
+            id="course_select",
+            item_id_getter=lambda item: item["short"],
+            on_click=select_course
+        ),
+        width=2,
+        height=10,
+        id="courses_scroller",
+        hide_on_single_page=True
+    ),
+    state=OrderSG.select_course,
+    getter=get_courses
+)
+
 product_window = Window(
     Format("📦 Товари курсу {dialog_data[selected_course]}:"),
     ScrollingGroup(
