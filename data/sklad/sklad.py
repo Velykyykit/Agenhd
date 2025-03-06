@@ -1,120 +1,98 @@
 import os
 import gspread
-import logging
-from aiogram import types
-from aiogram_dialog import Dialog, Window, DialogManager
-from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Button, Row
-from aiogram_dialog.widgets.text import Const, Format
-from aiogram.fsm.state import StatesGroup, State
+import asyncio
+from fpdf import FPDF
+from datetime import datetime
+import pytz
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, CallbackQuery
+from menu.keyboards import get_restart_keyboard
 
-# Налаштування логування (Railway)
-logging.basicConfig(level=logging.INFO)
+# Налаштування часової зони для Києва
+kyiv_tz = pytz.timezone("Europe/Kiev")
 
-# Конфігурація Google Sheets
-SHEET_SKLAD = os.getenv("SHEET_SKLAD")
 CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
+FONT_PATH = os.path.join("/app/config/fonts", "DejaVuSans.ttf")
 
-# Підключення до Google Sheets
-gc = gspread.service_account(filename=CREDENTIALS_PATH)
-sh = gc.open_by_key(SHEET_SKLAD)
-worksheet_courses = sh.worksheet("dictionary")
-worksheet_sklad = sh.worksheet("SKLAD")
+async def get_sklad_menu():
+    """Меню для розділу складу."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🛒 Зробити Замовлення", callback_data="order")],
+        [InlineKeyboardButton(text="📊 Перевірити Наявність", callback_data="check_stock")]
+    ])
 
-# Стан вибору курсу і товару
-class OrderSG(StatesGroup):
-    select_course = State()
-    show_products = State()
+async def handle_sklad(message):
+    """Обробка розділу складу."""
+    await message.answer("📦 Ви у розділі складу. Оберіть дію:", reply_markup=await get_sklad_menu())
+    keyboard = await get_restart_keyboard()
+    await message.answer("🔄 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=keyboard)
 
-# Отримання курсів (до 20)
-async def get_courses(**kwargs):
-    rows = worksheet_courses.get_all_records()
-    courses = [{"name": row["course"], "short": row["short"]} for row in rows][:20]
-    return {"courses": courses}
+async def get_all_stock():
+    """Отримання даних складу."""
+    gc = gspread.service_account(filename=CREDENTIALS_PATH)
+    sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
+    worksheet = sh.worksheet("SKLAD")
+    data = await asyncio.to_thread(worksheet.get_all_values)
+    stock_items = [{
+        "id": row[0],
+        "course": row[1],
+        "name": row[2],
+        "stock": int(row[3]) if row[3].isdigit() else 0,
+        "available": int(row[4]) if row[4].isdigit() else 0,
+        "price": int(row[5]) if row[5].isdigit() else 0
+    } for row in data[1:]]
+    return stock_items
 
-# Отримання товарів за курсом
-async def get_products(dialog_manager: DialogManager, **kwargs):
-    selected_course = dialog_manager.dialog_data.get("selected_course", None)
-    cart = dialog_manager.dialog_data.setdefault("cart", {})
+async def show_all_stock(call: CallbackQuery):
+    """Генерація PDF зі списком товарів та надсилання користувачу."""
+    await call.answer()
+    wait_message = await call.message.answer("⏳ Зачекайте, документ формується...")
+    try:
+        if not os.path.exists(FONT_PATH):
+            await call.message.answer("❌ Помилка: Файл шрифту DejaVuSans.ttf не знайдено!")
+            return
+        items = await get_all_stock()
+        now = datetime.now(kyiv_tz).strftime("%Y-%m-%d_%H-%M")
+        filename = f"sklad_HD_{now}.pdf"
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.add_font("DejaVu", "", FONT_PATH, uni=True)
+        pdf.set_font("DejaVu", '', 12)
+        pdf.cell(200, 10, f"Наявність товарів на складі (станом на {now})", ln=True, align="C")
+        pdf.ln(10)
+        pdf.cell(30, 8, "ID", border=1, align="C")
+        pdf.cell(80, 8, "Товар", border=1, align="C")
+        pdf.cell(30, 8, "На складі", border=1, align="C")
+        pdf.cell(30, 8, "Ціна", border=1, align="C")
+        pdf.ln()
+        for item in items:
+            pdf.cell(30, 8, str(item["id"]), border=1, align="C")
+            pdf.cell(80, 8, item["name"], border=1, align="L")
+            pdf.cell(30, 8, str(item["stock"]), border=1, align="C")
+            pdf.cell(30, 8, f"{item['price']}₴", border=1, align="C")
+            pdf.ln()
+        pdf.output(filename)
+        await call.message.bot.delete_message(chat_id=call.message.chat.id, message_id=wait_message.message_id)
+        file = FSInputFile(filename)
+        await call.message.answer_document(file, caption="📄 Ось список наявних товарів на складі.")
+        os.remove(filename)
+    except Exception as e:
+        await call.message.answer("❌ Помилка при створенні документа!")
+        print(f"❌ ПОМИЛКА: {e}")
 
-    if not selected_course:
-        return {"products": []}
+#async def show_courses_for_order(bot, message):
+#    """Показує список курсів для замовлення."""
+#    gc = gspread.service_account(filename=CREDENTIALS_PATH)
+#    sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
+#    worksheet = sh.worksheet("dictionary")  # Аркуш із курсами
+#
+#    courses = await asyncio.to_thread(worksheet.col_values, 1)  # Отримати всі назви курсів
+#    if not courses:
+#        await message.answer("❌ Немає доступних курсів для замовлення.")
+#        return
 
-    rows = worksheet_sklad.get_all_records()
-    products = [
-        {"id": str(row["id"]), "name": row["name"], "price": row["price"], "quantity": cart.get(str(row["id"]), 0)}
-        for row in rows if row["course"] == selected_course
-    ]
+    # Ініціалізація клавіатури із вказанням inline_keyboard
+    markup = InlineKeyboardMarkup(inline_keyboard=[])
+    for course in courses:
+        markup.inline_keyboard.append([InlineKeyboardButton(text=course, callback_data=f"course_{course}")])
 
-    return {"products": products}
-
-# Обробник вибору курсу
-async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
-    selected_course = item_id
-    manager.dialog_data["selected_course"] = selected_course
-    manager.dialog_data["cart"] = {}
-
-    # 🔥 Логування Railway
-    logging.info(f"[COURSE SELECTED] Користувач {callback.from_user.id} обрав курс: {selected_course}")
-
-    await callback.answer(f"✅ Ви обрали курс: {selected_course}")
-
-    # Перехід до списку товарів
-    await manager.next()
-
-# Обробники кнопок ➖ та ➕
-async def update_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str, delta: int):
-    cart = manager.dialog_data.setdefault("cart", {})
-    current_quantity = cart.get(item_id, 0)
-    new_quantity = max(0, current_quantity + delta)  # Не дозволяємо значення менше 0
-    cart[item_id] = new_quantity
-    await callback.answer(f"🔄 Кількість оновлено: {new_quantity}")
-    await manager.show()  # Оновлення вікна
-
-# Вікно вибору курсу
-course_window = Window(
-    Const("📚 Оберіть курс:"),
-    ScrollingGroup(
-        Select(
-            Format("🎓 {item[name]}"),
-            items="courses",
-            id="course_select",
-            item_id_getter=lambda item: item["short"],
-            on_click=select_course
-        ),
-        width=2,
-        height=10,
-        id="courses_scroller",
-        hide_on_single_page=True
-    ),
-    state=OrderSG.select_course,
-    getter=get_courses
-)
-
-# Вікно виводу товарів
-product_window = Window(
-    Format("📦 Товари курсу {dialog_data[selected_course]}:"),
-    ScrollingGroup(
-        Row(
-            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"),
-            Button(Const("➖"), id=lambda item=item: f"minus_{item['id']}",
-                   on_click=lambda c, w, m, item_id=item['id']: update_quantity(c, w, m, item_id, -1)),
-            Format("{item[quantity]}"),
-            Button(Const("➕"), id=lambda item=item: f"plus_{item['id']}",
-                   on_click=lambda c, w, m, item_id=item['id']: update_quantity(c, w, m, item_id, 1)),
-        ),
-        items="products",
-        id="products_scroller",
-        width=1,
-        height=10,
-        hide_on_single_page=True
-    ),
-    Row(
-        Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
-        Button(Const("🛒 Додати в кошик"), id="add_to_cart", on_click=lambda c, w, m: c.answer("🚧 Функція в розробці")),
-    ),
-    state=OrderSG.show_products,
-    getter=get_products
-)
-
-# Створюємо діалог
-order_dialog = Dialog(course_window, product_window)
+    await message.answer("📚 Оберіть курс для замовлення:", reply_markup=markup)
