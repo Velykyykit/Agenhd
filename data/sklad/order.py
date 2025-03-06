@@ -52,29 +52,9 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
 
     return {"products": products}
 
-# Обробник вибору курсу
-async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
-    selected_course = item_id
-    manager.dialog_data["selected_course"] = selected_course
-    manager.dialog_data["cart"] = {}
-
-    # 🔥 Логування Railway
-    logging.info(f"[COURSE SELECTED] Користувач {callback.from_user.id} обрав курс: {selected_course}")
-
-    await callback.answer(f"✅ Ви обрали курс: {selected_course}")
-
-    # Перехід до списку товарів
-    await manager.next()
-
-# Обробники кнопок ➖ та ➕
-async def update_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, delta: int):
-    item_id = widget.widget_id.split("_")[-1]  # Отримуємо id товару з ідентифікатора кнопки
-    cart = manager.dialog_data.setdefault("cart", {})
-    current_quantity = cart.get(item_id, 0)
-    new_quantity = max(0, current_quantity + delta)  # Не дозволяємо значення менше 0
-    cart[item_id] = new_quantity
-    await callback.answer(f"🔄 Кількість оновлено: {new_quantity}")
-    await manager.show()  # Оновлення вікна
+# Заглушка для кнопок ➖ та ➕
+async def placeholder_action(callback: types.CallbackQuery, widget, manager: DialogManager):
+    await callback.answer("🚧 Функція зміни кількості товару ще в розробці")
 
 # Вікно вибору курсу
 course_window = Window(
@@ -85,7 +65,7 @@ course_window = Window(
             items="courses",
             id="course_select",
             item_id_getter=lambda item: item["short"],
-            on_click=select_course
+            on_click=lambda c, w, m, item_id: c.answer(f"✅ Ви обрали курс: {item_id}")
         ),
         width=2,
         height=10,
@@ -102,11 +82,9 @@ product_window = Window(
     ScrollingGroup(
         Row(
             Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"),
-            Button(Const("➖"), id=Format("minus_{item[id]}"),
-                   on_click=lambda c, w, m: update_quantity(c, w, m, -1)),
+            Button(Const("➖"), id=Format("minus_{item[id]}"), on_click=placeholder_action),
             Format("{item[quantity]}"),
-            Button(Const("➕"), id=Format("plus_{item[id]}"),
-                   on_click=lambda c, w, m: update_quantity(c, w, m, 1)),
+            Button(Const("➕"), id=Format("plus_{item[id]}"), on_click=placeholder_action),
         ),
         items="products",
         id="products_scroller",
