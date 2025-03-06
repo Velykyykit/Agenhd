@@ -119,7 +119,7 @@ product_window = Window(
     
     Row(
         Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease")),
-        Const("{dialog_data[quantity]}"),
+        Format("{quantity}"),
         Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase")),
     ),
     
