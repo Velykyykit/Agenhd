@@ -88,6 +88,7 @@ course_window = Window(
 # Вікно виводу товарів
 product_window = Window(
     Format("📦 Товари курсу {dialog_data[selected_course]}:"),
+
     Group(
         Select(
             Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"),
@@ -98,12 +99,14 @@ product_window = Window(
         width=1,
         id="products_group"
     ),
+
     Group(
-        Button(Const("➖"), id="minus_{item[id]}", on_click=update_quantity),
+        Button(Const("➖"), id="minus_button", on_click=update_quantity),
         Format("{dialog_data[cart].get(item[id], 0)}"),
-        Button(Const("➕"), id="plus_{item[id]}", on_click=update_quantity),
+        Button(Const("➕"), id="plus_button", on_click=update_quantity),
         width=3
     ),
+
     Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
     Button(Const("🛒 Додати в кошик"), id="add_to_cart", on_click=lambda c, w, m: c.answer("🔹 Заглушка: Додано в кошик")),
     state=OrderSG.show_products,
