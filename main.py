@@ -144,7 +144,7 @@ async def start_order_dialog(call: types.CallbackQuery, dialog_manager: DialogMa
     """Запуск діалогу для оформлення замовлення."""
     await call.answer()
     # Запускаємо діалог (OrderSG.select_course)
-    await dialog_manager.start(OrderDialog.select_course, mode=StartMode.RESET_STACK)
+    await dialog_manager.start(OrderSG.select_course, mode=StartMode.RESET_STACK)
 
 async def main():
     """Запуск бота в режимі polling."""
