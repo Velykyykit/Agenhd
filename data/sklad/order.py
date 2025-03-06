@@ -98,9 +98,9 @@ product_window = Window(
         hide_on_single_page=True
     ),
     Row(
-        Button(Const("➖"), id=lambda item: f"decrease_{item['id']}"),
+        Button(Const("➖"), id=Format("decrease_{item[id]}")),
         Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
-        Button(Const("➕"), id=lambda item: f"increase_{item['id']}"),
+        Button(Const("➕"), id=Format("increase_{item[id]}")),
     ),
     state=OrderSG.show_products,
     getter=get_products
