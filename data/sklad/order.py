@@ -92,4 +92,10 @@ product_window = Window(
         ) for item in cache["products"].get("data", {}).values()
     ],
     Row(
-        Button(Const("🔙 Назад"), id="back
+        Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
+    ),
+    state=OrderSG.show_products,
+    getter=get_products
+)
+
+order_dialog = Dialog(course_window, product_window)
