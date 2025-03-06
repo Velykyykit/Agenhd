@@ -22,9 +22,10 @@ async def get_courses(**kwargs):
     sh = gc.open_by_key(SHEET_SKLAD)
     worksheet = sh.worksheet("dictionary")
     courses = worksheet.get_all_records(numericise_ignore=['all'], head=1)
-    
+
     formatted_courses = [
-        {"name": course.get("course"), "short": course.get("short")} for course in courses
+        {"name": course.get("course"), "short": course.get("short")}
+        for course in courses
     ]
     return formatted_courses
 
@@ -38,14 +39,21 @@ async def get_courses_in_columns(**kwargs):
 async def get_items(dialog_manager: DialogManager, **kwargs):
     """Отримання товарів для вибраного курсу."""
     selected_course = dialog_manager.dialog_data.get("selected_course")
-    
+
     gc = gspread.service_account(filename=CREDENTIALS_PATH)
     sh = gc.open_by_key(SHEET_SKLAD)
     worksheet = sh.worksheet("SKLAD")
     data = worksheet.get_all_records(numericise_ignore=['all'], head=1)
-    
+
     items = [
-        {"id": str(item["id"]), "name": item["name"], "price": item["price"], "quantity": 0}
+        {
+            "id": str(item["id"]),
+            "name": item["name"],
+            "price": item["price"],
+            "quantity": 0,
+            "plus_id": f"plus_{item['id']}",
+            "minus_id": f"minus_{item['id']}"
+        }
         for item in data if item["course"] == selected_course
     ]
     return {"items": items}
@@ -59,7 +67,7 @@ async def change_quantity(callback: types.CallbackQuery, widget, manager: Dialog
 order_dialog = Dialog(
     Window(
         Const("📚 Оберіть курс:"),
-        Group(
+        Row(
             Select(
                 Format("🎓 {item[name]}"), items="left_courses", id="left_course_select",
                 item_id_getter=lambda item: item["short"],
@@ -70,7 +78,6 @@ order_dialog = Dialog(
                 item_id_getter=lambda item: item["short"],
                 on_click=lambda c, w, m, item_id: m.dialog_data.update(selected_course=item_id) or m.switch_to(OrderDialog.select_items)
             ),
-            width=2
         ),
         state=OrderDialog.select_course,
         getter=get_courses_in_columns,
@@ -79,9 +86,9 @@ order_dialog = Dialog(
         Const("🛍️ Оберіть товари:"),
         Column(
             Row(
-                Button(Const("➖"), id=lambda item: f"minus_{item['id']}", on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, -1)),
+                Button(Const("➖"), id=lambda item: item["minus_id"], on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, -1)),
                 Format("🏷️ {item[name]} - 💰 {item[price]} грн | 🛒 {item[quantity]}"),
-                Button(Const("➕"), id=lambda item: f"plus_{item['id']}", on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, 1))
+                Button(Const("➕"), id=lambda item: item["plus_id"], on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, 1))
             ),
             items="items"
         ),
