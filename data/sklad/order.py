@@ -1,7 +1,7 @@
 import os
 import gspread
 from aiogram import types
-from aiogram_dialog import Dialog, Window
+from aiogram_dialog import Dialog, Window, DialogManager
 from aiogram_dialog.widgets.kbd import Button, Row, Column
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
@@ -35,7 +35,7 @@ async def get_courses(**kwargs):
 
 
 # Отримання списку товарів для вибраного курсу
-async def get_items(dialog_manager, **kwargs):
+async def get_items(dialog_manager: DialogManager, **kwargs):
     selected_course = dialog_manager.dialog_data.get("selected_course")
     if not selected_course:
         return {"items": []}
@@ -47,16 +47,16 @@ async def get_items(dialog_manager, **kwargs):
 
 
 # Обробник натискання на курс
-async def select_course(callback: types.CallbackQuery, button: Button, manager):
+async def select_course(callback: types.CallbackQuery, button: Button, manager: DialogManager):
     manager.dialog_data["selected_course"] = button.widget_id
     await manager.switch_to(OrderSG.select_item)
 
 
 # Обробник зміни кількості товарів
-async def change_quantity(callback: types.CallbackQuery, button: Button, manager, item_id: str, delta: int):
+async def change_quantity(callback: types.CallbackQuery, button: Button, manager: DialogManager, item_id: str, delta: int):
     cart = manager.dialog_data.setdefault("cart", {})
     cart[item_id] = max(cart.get(item_id, 0) + delta, 0)
-    await manager.update()
+    await manager.refresh()
 
 
 # Вікно вибору курсу
@@ -64,33 +64,38 @@ course_window = Window(
     Const("📚 Оберіть курс:"),
     Row(
         Column(
-            *[
-                Button(Format("🎓 {item[name]}"), id=item["short"], on_click=select_course)
-                for item in (await get_courses())["col1"]
-            ]
+            Select(
+                Format("🎓 {item[name]}"), items="col1", id="left_course_select",
+                item_id_getter=lambda item: item["short"],
+                on_click=select_course
+            ),
         ),
         Column(
-            *[
-                Button(Format("🎓 {item[name]}"), id=item["short"], on_click=select_course)
-                for item in (await get_courses())["col2"]
-            ]
+            Select(
+                Format("🎓 {item[name]}"), items="col2", id="right_course_select",
+                item_id_getter=lambda item: item["short"],
+                on_click=select_course
+            ),
         ),
     ),
     state=OrderSG.select_course,
+    getter=get_courses,  # ВАЖЛИВО: Отримує курси тут, а не в `Window`
 )
 
 # Вікно вибору товарів
 item_window = Window(
     Const("🛍 Виберіть товари:"),
-    *[
-        Row(
+    Row(
+        Select(
             Format("{item[name]} - {item[price]} грн 🛒 {cart.get(item[id], 0)} шт"),
-            Button(Const("➖"), id=f"minus_{item['id']}", on_click=lambda c, w, m, item_id=item["id"]: change_quantity(c, w, m, item_id, -1)),
-            Button(Const("➕"), id=f"plus_{item['id']}", on_click=lambda c, w, m, item_id=item["id"]: change_quantity(c, w, m, item_id, 1)),
-        )
-        for item in (await get_items())["items"]
-    ],
+            items="items", id="item_select",
+            item_id_getter=lambda item: item["id"]
+        ),
+        Button(Const("➖"), id="minus_item", on_click=lambda c, w, m: change_quantity(c, w, m, c.data, -1)),
+        Button(Const("➕"), id="plus_item", on_click=lambda c, w, m: change_quantity(c, w, m, c.data, 1)),
+    ),
     state=OrderSG.select_item,
+    getter=get_items,
 )
 
 # Створення діалогу
