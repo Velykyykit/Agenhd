@@ -23,7 +23,7 @@ cache = {
     "products": {"data": {}, "timestamp": 0}
 }
 
-# Стан вибору курсу, товару і кількості
+# Стан вибору курсу і товару
 class OrderSG(StatesGroup):
     select_course = State()
     show_products = State()
@@ -44,49 +44,46 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
     selected_course = dialog_manager.dialog_data.get("selected_course", None)
     if not selected_course:
         return {"products": []}
-
+    
     now = time.time()
     if selected_course in cache["products"] and now - cache["products"][selected_course]["timestamp"] < CACHE_EXPIRY:
         return {"products": cache["products"][selected_course]["data"]}
-
+    
     rows = worksheet_sklad.get_all_records()
     products = [
         {"id": str(index), "name": row["name"], "price": row["price"]}
         for index, row in enumerate(rows, start=1) if row["course"] == selected_course
     ]
-
+    
     cache["products"][selected_course] = {"data": products, "timestamp": now}
-    dialog_manager.dialog_data["products"] = products  # Зберігаємо список товарів
-
     return {"products": products}
 
 async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
-    """Обробка вибору курсу"""
     manager.dialog_data["selected_course"] = item_id
     await callback.answer(f"✅ Ви обрали курс: {item_id}")
     await manager.next()
 
 async def select_product(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
-    """При натисканні на товар відкриваємо екран вибору кількості"""
+    """При натисканні на товар відкривається вікно вибору кількості"""
     manager.dialog_data["selected_product"] = item_id
-    manager.dialog_data["quantity"] = 1  # Початкова кількість товару
+    manager.dialog_data["quantity"] = 0  # Початкове значення 0
     await manager.next()
 
 async def change_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, action: str):
-    """Змінюємо кількість товару"""
-    quantity = manager.dialog_data.get("quantity", 1)
+    """Зміна кількості товару"""
+    quantity = manager.dialog_data.get("quantity", 0)
     if action == "increase":
         quantity += 1
-    elif action == "decrease" and quantity > 1:
+    elif action == "decrease" and quantity > 0:
         quantity -= 1
     manager.dialog_data["quantity"] = quantity
     await callback.answer()
-    await manager.dialog().update()
+    await manager.show()  # Оновлюємо вікно
 
 async def confirm_selection(callback: types.CallbackQuery, widget, manager: DialogManager):
-    """Підтвердження вибору товару"""
+    """Підтвердження вибору кількості"""
     selected_product = manager.dialog_data.get("selected_product", "❌ Невідомий товар")
-    quantity = manager.dialog_data.get("quantity", 1)
+    quantity = manager.dialog_data.get("quantity", 0)
     await callback.answer(f"✅ Додано {quantity} шт. товару {selected_product} у кошик!")
     await manager.done()
 
@@ -117,7 +114,7 @@ product_window = Window(
             items="products",
             id="product_select",
             item_id_getter=lambda item: item["id"],
-            on_click=select_product  # Переходимо до екрану вибору кількості
+            on_click=select_product
         ),
         width=1,
         height=10,
