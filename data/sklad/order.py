@@ -104,7 +104,7 @@ product_window = Window(
         hide_on_single_page=True
     ),
     Row(
-        Counter("quantity_counter", default=1, min_value=1, max_value=100, step=1),
+        Counter("quantity_counter", default=1, min_value=1, max_value=100),
     ),
     Row(
         Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
