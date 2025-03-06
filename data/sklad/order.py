@@ -23,10 +23,11 @@ cache = {
     "products": {"data": {}, "timestamp": 0}
 }
 
-# Стан вибору курсу і товару
+# Стан вибору курсу, товару і кількості
 class OrderSG(StatesGroup):
     select_course = State()
     show_products = State()
+    select_quantity = State()
 
 async def get_courses(**kwargs):
     now = time.time()
@@ -65,16 +66,29 @@ async def select_course(callback: types.CallbackQuery, widget, manager: DialogMa
     await callback.answer(f"✅ Ви обрали курс: {item_id}")
     await manager.next()
 
-def get_product_rows(data):
-    """Генерує рядки з кнопками товарів"""
-    products = data.get("products", [])
-    return [
-        Row(
-            Button(Const("⠀"), id=f"empty_left_{item['id']}"),  # Ліва пустая кнопка
-            Button(Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"), id=f"product_{item['id']}"),
-            Button(Const("⠀"), id=f"empty_right_{item['id']}")  # Права пустая кнопка
-        ) for item in products
-    ]
+async def select_product(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
+    """При натисканні на товар відкриваємо екран вибору кількості"""
+    manager.dialog_data["selected_product"] = item_id
+    manager.dialog_data["quantity"] = 1  # Початкова кількість товару
+    await manager.next()
+
+async def change_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, action: str):
+    """Змінюємо кількість товару"""
+    quantity = manager.dialog_data.get("quantity", 1)
+    if action == "increase":
+        quantity += 1
+    elif action == "decrease" and quantity > 1:
+        quantity -= 1
+    manager.dialog_data["quantity"] = quantity
+    await callback.answer()
+    await manager.dialog().update()
+
+async def confirm_selection(callback: types.CallbackQuery, widget, manager: DialogManager):
+    """Підтвердження вибору товару"""
+    selected_product = manager.dialog_data.get("selected_product", "❌ Невідомий товар")
+    quantity = manager.dialog_data.get("quantity", 1)
+    await callback.answer(f"✅ Додано {quantity} шт. товару {selected_product} у кошик!")
+    await manager.done()
 
 course_window = Window(
     Const("📚 Оберіть курс:"),
@@ -84,7 +98,7 @@ course_window = Window(
             items="courses",
             id="course_select",
             item_id_getter=lambda item: item["short"],
-            on_click=select_course  # ❗ Тепер функція вже оголошена вище
+            on_click=select_course
         ),
         width=2,
         height=10,
@@ -97,12 +111,38 @@ course_window = Window(
 
 product_window = Window(
     Format("📦 Товари курсу {dialog_data[selected_course]}:"),
-    *get_product_rows({"products": []}),  # Викликаємо функцію для генерації кнопок
+    ScrollingGroup(
+        Select(
+            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"),
+            items="products",
+            id="product_select",
+            item_id_getter=lambda item: item["id"],
+            on_click=select_product  # Переходимо до екрану вибору кількості
+        ),
+        width=1,
+        height=10,
+        id="products_scroller",
+        hide_on_single_page=True
+    ),
     Row(
         Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
     ),
     state=OrderSG.show_products,
-    getter=get_products  # Передаємо дані через getter
+    getter=get_products
 )
 
-order_dialog = Dialog(course_window, product_window)
+quantity_window = Window(
+    Format("🖼 Фото товару тут\n📦 Товар: {dialog_data[selected_product]}"),
+    Row(
+        Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease")),
+        Format(" {dialog_data[quantity]} "),
+        Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase")),
+    ),
+    Row(
+        Button(Const("✅ Підтвердити"), id="confirm_selection", on_click=confirm_selection),
+        Button(Const("🔙 Назад"), id="back_to_products", on_click=lambda c, w, m: m.back()),
+    ),
+    state=OrderSG.select_quantity
+)
+
+order_dialog = Dialog(course_window, product_window, quantity_window)
