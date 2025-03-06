@@ -35,9 +35,10 @@ async def get_courses(**kwargs):
 async def get_products(dialog_manager: DialogManager, **kwargs):
     selected_course = dialog_manager.dialog_data.get("selected_course", "❓Курс не вибрано")
     
-    if "cart" not in dialog_manager.dialog_data:
-        dialog_manager.dialog_data["cart"] = {}
     cart = dialog_manager.dialog_data.get("cart", {})
+    if not isinstance(cart, dict):
+        cart = {}
+        dialog_manager.dialog_data["cart"] = cart
     
     rows = worksheet_sklad.get_all_records()
     products = [
@@ -102,7 +103,7 @@ product_window = Window(
     
     ScrollingGroup(
         Select(
-            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн | 📦 {cart.get(item[id], 0)} шт"),
+            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн | 📦 {cart.get(item[id], 0) if cart else 0} шт"),
             items="products",
             id="product_select",
             item_id_getter=lambda item: item["id"],
