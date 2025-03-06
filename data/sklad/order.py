@@ -34,7 +34,10 @@ async def get_courses(**kwargs):
 # Отримання товарів за курсом
 async def get_products(dialog_manager: DialogManager, **kwargs):
     selected_course = dialog_manager.dialog_data.get("selected_course", "❓Не вибрано")
-    cart = dialog_manager.dialog_data.setdefault("cart", {})
+    
+    if "cart" not in dialog_manager.dialog_data:
+        dialog_manager.dialog_data["cart"] = {}
+    cart = dialog_manager.dialog_data["cart"]
     
     rows = worksheet_sklad.get_all_records()
     products = [
@@ -48,14 +51,17 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
 async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
     selected_course = item_id
     manager.dialog_data["selected_course"] = selected_course
-    manager.dialog_data.setdefault("cart", {})  # Забезпечення існування cart
+    if "cart" not in manager.dialog_data:
+        manager.dialog_data["cart"] = {}
     logging.info(f"[COURSE SELECTED] Користувач {callback.from_user.id} обрав курс: {selected_course}")
     await callback.answer(f"✅ Ви обрали курс: {selected_course}")
     await manager.next()
 
 # Обробка натискання кнопок + і -
 async def update_quantity(callback: types.CallbackQuery, widget, manager: DialogManager):
-    cart = manager.dialog_data.setdefault("cart", {})
+    if "cart" not in manager.dialog_data:
+        manager.dialog_data["cart"] = {}
+    cart = manager.dialog_data["cart"]
     action, item_id = callback.data.split("_")  # "plus_123" або "minus_123"
     
     delta = 1 if action == "plus" else -1
@@ -90,32 +96,13 @@ course_window = Window(
 
 # Вікно виводу товарів
 product_window = Window(
-    Format("📦 Товари курсу {selected_course}:"),
+    Format("📦 Товари курсу {selected_course}:")
+    if "selected_course" in dialog_manager.dialog_data else Const("📦 Курс не вибрано"),
     
     ScrollingGroup(
         Select(
-            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн | 📦 {cart.get(item[id], 0)} шт"),
+            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн | 📦 {cart.get(item[id], 0) if cart else 0} шт"),
             items="products",
             id="product_select",
             item_id_getter=lambda item: item["id"],
         ),
-        width=1,
-        id="products_scroller",
-        hide_on_single_page=True
-    ),
-
-    Group(
-        Button(Const("➖"), id="minus_button", on_click=update_quantity),
-        Button(Const("➕"), id="plus_button", on_click=update_quantity),
-        width=2
-    ),
-
-    Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
-    Button(Const("🛒 Додати в кошик"), id="add_to_cart", on_click=lambda c, w, m: c.answer("🔹 Заглушка: Додано в кошик")),
-
-    state=OrderSG.show_products,
-    getter=get_products
-)
-
-# Створюємо діалог
-order_dialog = Dialog(course_window, product_window)
