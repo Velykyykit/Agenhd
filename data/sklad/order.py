@@ -97,10 +97,10 @@ product_window = Window(
         Row(
             Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"),
             Button(Const("➖"), id=lambda i: f"minus_{i['id']}",
-                   on_click=lambda c, w, m, item_id=f"{w.widget_id.split('_')[-1]}": update_quantity(c, w, m, item_id, -1)),
+                   on_click=lambda c, w, m: update_quantity(c, w, m, w.widget_id.split("_")[-1], -1)),
             Format("{item[quantity]}"),
             Button(Const("➕"), id=lambda i: f"plus_{i['id']}",
-                   on_click=lambda c, w, m, item_id=f"{w.widget_id.split('_')[-1]}": update_quantity(c, w, m, item_id, 1)),
+                   on_click=lambda c, w, m: update_quantity(c, w, m, w.widget_id.split("_")[-1], 1)),
         ),
         items="products",
         id="products_scroller",
