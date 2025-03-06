@@ -92,7 +92,7 @@ product_window = Window(
     
     ScrollingGroup(
         Select(
-            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн | 📦 {dialog_data[cart].get(item[id], 0)} шт"),
+            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн | 📦 {cart.get(item[id], 0)} шт"),
             items="products",
             id="product_select",
             item_id_getter=lambda item: item["id"],
