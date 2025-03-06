@@ -1,7 +1,7 @@
 import os
 import gspread
 from aiogram import types
-from aiogram_dialog import Dialog, Window, DialogManager, StartMode
+from aiogram_dialog import Dialog, Window, DialogManager
 from aiogram_dialog.widgets.kbd import ScrollingGroup, Select
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
@@ -19,23 +19,18 @@ worksheet_courses = sh.worksheet("dictionary")
 class OrderSG(StatesGroup):
     select_course = State()
 
-# Отримуємо курси (до 20)
+# Отримання курсів (до 20)
 async def get_courses(**kwargs):
     rows = worksheet_courses.get_all_records()
-    # Беремо не більше 20
-    courses = [
-        {"name": row["course"], "short": row["short"]}
-        for row in rows
-    ][:20]
+    courses = [{"name": row["course"], "short": row["short"]} for row in rows][:20]
     return {"courses": courses}
 
 # Обробник вибору курсу
 async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
-    # item_id = коротка назва курсу
     manager.dialog_data["selected_course"] = item_id
     await callback.answer(f"Ви обрали курс: {item_id}")
 
-# Вікно вибору курсу
+# Вікно вибору курсу (без кнопок прокрутки)
 course_window = Window(
     Const("📚 Оберіть курс:"),
     ScrollingGroup(
@@ -46,9 +41,10 @@ course_window = Window(
             item_id_getter=lambda item: item["short"],
             on_click=select_course
         ),
-        width=2,    # 2 кнопки в одному рядку
-        height=10,  # разом 10 рядків, тобто 2х10=20 кнопок
-        id="courses_scroller"
+        width=2,  # 2 стовпці
+        height=10,  # 10 рядків (разом 20 кнопок)
+        id="courses_scroller",
+        hide_on_single_page=True  # 🔥 Прибирає кнопки прокрутки, якщо всі елементи вміщуються
     ),
     state=OrderSG.select_course,
     getter=get_courses
