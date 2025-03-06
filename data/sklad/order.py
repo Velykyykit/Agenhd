@@ -41,7 +41,7 @@ async def get_courses_in_columns(**kwargs):
 order_dialog = Dialog(
     Window(
         Const("📚 Оберіть курс:"),
-        Row(
+        Column(Row(
             Column(
                 Select(
                     Format("🎓 {item[name]}"), items="left_courses", id="left_course_select",
@@ -54,8 +54,7 @@ order_dialog = Dialog(
                     item_id_getter=lambda item: item["short"], on_click=lambda c, w, m, item_id: m.dialog_data.update(selected_course=item_id) or m.switch_to(OrderDialog.select_items)
                 ),
             ),
-        ),
-        state=OrderDialog.select_course,
+        )), state=OrderDialog.select_course,
         getter=get_courses_in_columns,
     )
 )
