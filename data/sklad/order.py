@@ -30,20 +30,22 @@ async def get_items(dialog_manager: DialogManager, **kwargs):
 
 order_dialog = Dialog(
     Window(
-        Const("📚 Оберіть курс:"),
+        Const("\ud83d\udcda Оберіть курс:"),
         Select(
-            text=lambda item: f"🎓 {item['name']}",
+            items=[],  # Уникаємо помилки ініціалізації
+            text=lambda item: f"\ud83c\udf93 {item['name']}",
             id="select_course",
             item_id_getter=lambda item: item["short"],
-            on_click=lambda c, w, m, item_id: m.dialog_data.update(selected_course=item_id) or m.switch_to("OrderDialog:select_items")
+            on_click=lambda c, w, m, item_id: update_selected_course(m, item_id)
         ),
         state="OrderDialog:select_course",
         getter=get_courses  # Виклик `get_courses`
     ),
     Window(
-        Const("🛍️ Оберіть товари:"),
+        Const("\ud83d\uded9️ Оберіть товари:"),
         Row(
             Select(
+                items=[],  # Уникаємо помилки
                 text=lambda item: f"➕ {item['name']}",
                 id="select_item",
                 item_id_getter=lambda item: item["id"],
@@ -55,6 +57,12 @@ order_dialog = Dialog(
         getter=get_items  # Виклик `get_items`
     )
 )
+
+async def update_selected_course(dialog_manager: DialogManager, course_id):
+    """Оновлює вибраний курс і переключається на вибір товарів."""
+    dialog_manager.dialog_data["selected_course"] = course_id
+    logger.debug(f"[DEBUG] Вибраний курс: {course_id}")
+    await dialog_manager.switch_to("OrderDialog:select_items")
 
 async def change_quantity(c: types.CallbackQuery, w, m: DialogManager, item_id, change):
     """Зміна кількості товару"""
