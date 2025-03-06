@@ -27,7 +27,6 @@ cache = {
 class OrderSG(StatesGroup):
     select_course = State()
     show_products = State()
-    select_quantity = State()
 
 async def get_courses(**kwargs):
     now = time.time()
@@ -56,17 +55,10 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
     ]
     
     cache["products"][selected_course] = {"data": "\n".join(products), "timestamp": now}
-    return {"products": "\n".join(products)}
-
-async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
-    manager.dialog_data["selected_course"] = item_id
-    await callback.answer(f"✅ Ви обрали курс: {item_id}")
-    await manager.next()
-
-async def select_product(callback: types.CallbackQuery, widget, manager: DialogManager):
-    """Перехід до вибору кількості для конкретного товару."""
-    manager.dialog_data["quantity"] = 1  # Початкова кількість = 1
-    await manager.next()
+    return {
+        "products": "\n".join(products),
+        "quantity": 1  # Початкова кількість товару
+    }
 
 async def change_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, action: str):
     """Збільшення або зменшення кількості товару."""
@@ -86,7 +78,6 @@ async def add_to_cart(callback: types.CallbackQuery, widget, manager: DialogMana
     selected_course = manager.dialog_data.get("selected_course", "❌ Невідомий курс")
     quantity = manager.dialog_data.get("quantity", 1)
     await callback.answer(f"✅ Додано {quantity} шт. товару з курсу {selected_course} у кошик!")
-    await manager.done()
 
 course_window = Window(
     Const("📚 Оберіть курс:"),
@@ -96,7 +87,7 @@ course_window = Window(
             items="courses",
             id="course_select",
             item_id_getter=lambda item: item["short"],
-            on_click=select_course
+            on_click=lambda c, w, m, item_id: m.dialog_data.update(selected_course=item_id) or m.next()
         ),
         width=2,
         height=10,
@@ -109,28 +100,20 @@ course_window = Window(
 
 product_window = Window(
     Format("📦 Товари курсу {dialog_data[selected_course]}:\n\n{products}"),
-    Row(
-        Button(Const("🛒 Вибрати товар"), id="select_product", on_click=select_product),
-    ),
-    Row(
-        Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
-    ),
-    state=OrderSG.show_products,
-    getter=get_products
-)
-
-quantity_window = Window(
-    Format("🛒 Виберіть кількість товару:"),
+    
     Row(
         Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease")),
         Button(Format("{dialog_data[quantity]}"), id="quantity_display"),
         Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase")),
     ),
+    
     Row(
         Button(Const("✅ Додати в кошик"), id="confirm_quantity", on_click=add_to_cart),
-        Button(Const("🔙 Назад"), id="back_to_products", on_click=lambda c, w, m: m.back()),
+        Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
     ),
-    state=OrderSG.select_quantity
+    
+    state=OrderSG.show_products,
+    getter=get_products
 )
 
-order_dialog = Dialog(course_window, product_window, quantity_window)
+order_dialog = Dialog(course_window, product_window)
