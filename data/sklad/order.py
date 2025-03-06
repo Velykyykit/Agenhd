@@ -76,6 +76,25 @@ async def change_quantity(callback: types.CallbackQuery, widget, manager: Dialog
     await callback.answer()
     await manager.dialog().update()
 
+course_window = Window(
+    Const("📚 Оберіть курс:"),
+    ScrollingGroup(
+        Select(
+            Format("🎓 {item[name]}"),
+            items="courses",
+            id="course_select",
+            item_id_getter=lambda item: item["short"],
+            on_click=select_course
+        ),
+        width=2,
+        height=10,
+        id="courses_scroller",
+        hide_on_single_page=True
+    ),
+    state=OrderSG.select_course,
+    getter=get_courses
+)
+
 product_window = Window(
     Format("📦 Товари курсу {dialog_data[selected_course]}:"),
     ScrollingGroup(
@@ -92,9 +111,9 @@ product_window = Window(
         hide_on_single_page=True
     ),
     Row(
-        Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease", dialog_manager.dialog_data.get("selected_product", "0"))),
+        Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease", manager.dialog_data.get("selected_product", "0"))),
         Format("{dialog_data[products].get(dialog_data[selected_product], 0)}"),
-        Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase", dialog_manager.dialog_data.get("selected_product", "0"))),
+        Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase", manager.dialog_data.get("selected_product", "0"))),
     ),
     Row(
         Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
