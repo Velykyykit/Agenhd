@@ -3,7 +3,7 @@ import gspread
 import logging
 from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
-from aiogram_dialog.widgets.kbd import ScrollingGroup, Select
+from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Button
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 
@@ -18,10 +18,12 @@ CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
 gc = gspread.service_account(filename=CREDENTIALS_PATH)
 sh = gc.open_by_key(SHEET_SKLAD)
 worksheet_courses = sh.worksheet("dictionary")
+worksheet_sklad = sh.worksheet("SKLAD")
 
-# Стан вибору курсу
+# Стан вибору курсу і товару
 class OrderSG(StatesGroup):
     select_course = State()
+    show_products = State()
 
 # Отримання курсів (до 20)
 async def get_courses(**kwargs):
@@ -29,17 +31,35 @@ async def get_courses(**kwargs):
     courses = [{"name": row["course"], "short": row["short"]} for row in rows][:20]
     return {"courses": courses}
 
-# Обробник вибору курсу з логуванням
+# Отримання товарів за курсом
+async def get_products(dialog_manager: DialogManager, **kwargs):
+    selected_course = dialog_manager.dialog_data.get("selected_course", None)
+
+    if not selected_course:
+        return {"products": []}
+
+    rows = worksheet_sklad.get_all_records()
+    products = [
+        {"id": row["id"], "name": row["name"], "price": row["price"]}
+        for row in rows if row["course"] == selected_course
+    ]
+
+    return {"products": products}
+
+# Обробник вибору курсу
 async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
     selected_course = item_id
     manager.dialog_data["selected_course"] = selected_course
 
-    # 🔥 Запис у логи Railway
+    # 🔥 Логування Railway
     logging.info(f"[COURSE SELECTED] Користувач {callback.from_user.id} обрав курс: {selected_course}")
 
     await callback.answer(f"✅ Ви обрали курс: {selected_course}")
 
-# Вікно вибору курсу (без кнопок прокрутки)
+    # Перехід до списку товарів
+    await manager.next()
+
+# Вікно вибору курсу
 course_window = Window(
     Const("📚 Оберіть курс:"),
     ScrollingGroup(
@@ -50,14 +70,35 @@ course_window = Window(
             item_id_getter=lambda item: item["short"],
             on_click=select_course
         ),
-        width=2,  # 2 стовпці
-        height=10,  # 10 рядків (разом 20 кнопок)
+        width=2,  
+        height=10,
         id="courses_scroller",
-        hide_on_single_page=True  # 🔥 Прибирає кнопки прокрутки, якщо всі елементи вміщуються
+        hide_on_single_page=True  
     ),
     state=OrderSG.select_course,
     getter=get_courses
 )
 
+# Вікно виводу товарів
+product_window = Window(
+    Format("📦 Товари курсу {dialog_data[selected_course]}:"),
+    ScrollingGroup(
+        Select(
+            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"),
+            items="products",
+            id="product_select",
+            item_id_getter=lambda item: str(item["id"]),
+            on_click=lambda c, w, m, item_id: c.answer(f"ℹ️ Ви вибрали товар {item_id}")
+        ),
+        width=1,
+        height=10,
+        id="products_scroller",
+        hide_on_single_page=True  
+    ),
+    Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
+    state=OrderSG.show_products,
+    getter=get_products
+)
+
 # Створюємо діалог
-order_dialog = Dialog(course_window)
+order_dialog = Dialog(course_window, product_window)
