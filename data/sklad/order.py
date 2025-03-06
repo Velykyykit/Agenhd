@@ -29,14 +29,20 @@ async def get_courses_in_columns(**kwargs):
 
 # Функція отримання товарів для вибраного курсу
 async def get_items(dialog_manager: DialogManager, **kwargs):
-    selected_course = dialog_manager.dialog_data.get("selected_course")
+    selected_course = dialog_manager.start_data.get("selected_course")
+    if not selected_course:
+        return {"items": []}
+
     gc = gspread.service_account(filename=CREDENTIALS_PATH)
     sh = gc.open_by_key(SHEET_SKLAD)
     worksheet = sh.worksheet("SKLAD")
     data = worksheet.get_all_records()
+
     return {
-        "items": [{"id": item["id"], "name": item["name"], "price": item["price"], "quantity": 0}
-                   for item in data if item["course"] == selected_course]
+        "items": [
+            {"id": item["id"], "name": item["name"], "price": item["price"], "quantity": 0}
+            for item in data if item["course"] == selected_course
+        ]
     }
 
 # Функція зміни кількості товарів
@@ -53,12 +59,12 @@ order_dialog = Dialog(
             Select(
                 Format("🎓 {item[name]}"), items="left_courses", id="left_course_select",
                 item_id_getter=lambda item: item["short"],
-                on_click=lambda c, w, m, item_id: m.dialog_data.update(selected_course=item_id) or m.switch_to(OrderDialog.select_items)
+                on_click=lambda c, w, m, item_id: m.start(OrderDialog.select_items, {"selected_course": item_id})
             ),
             Select(
                 Format("🎓 {item[name]}"), items="right_courses", id="right_course_select",
                 item_id_getter=lambda item: item["short"],
-                on_click=lambda c, w, m, item_id: m.dialog_data.update(selected_course=item_id) or m.switch_to(OrderDialog.select_items)
+                on_click=lambda c, w, m, item_id: m.start(OrderDialog.select_items, {"selected_course": item_id})
             ),
             width=2
         ),
@@ -69,13 +75,23 @@ order_dialog = Dialog(
         Const("🛍️ Оберіть товари:"),
         Group(
             Select(
-                Format("🏷️ {item[name]} - 💰 {item[price]} грн | 🛒 {item[quantity]}"),
+                Format("🏷️ {item[name]} - 💰 {item[price]} грн | 🛒 {cart[item[id]]}"),
                 items="items", id="item_select",
                 item_id_getter=lambda item: item["id"],
             ),
-            Button(Const("➖"), id="minus_item", on_click=lambda c, w, m: change_quantity(c, w, m, c.data, -1)),
-            Button(Const("➕"), id="plus_item", on_click=lambda c, w, m: change_quantity(c, w, m, c.data, 1)),
-            width=1
+            Select(
+                Format("➖"), id="minus_item",
+                items="items",
+                item_id_getter=lambda item: item["id"],
+                on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, -1),
+            ),
+            Select(
+                Format("➕"), id="plus_item",
+                items="items",
+                item_id_getter=lambda item: item["id"],
+                on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, 1),
+            ),
+            width=2
         ),
         Button(Const("✅ Оформити замовлення"), id="confirm_order", on_click=lambda c, w, m: m.switch_to(OrderDialog.confirm_order)),
         state=OrderDialog.select_items,
