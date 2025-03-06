@@ -4,7 +4,7 @@ import time
 from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
 from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Button, Row
-from aiogram_dialog.widgets.text import Const, Format
+from aiogram_dialog.widgets.text import Const, Format, DynamicText
 from aiogram.fsm.state import StatesGroup, State
 
 # Підключення до Google Sheets
@@ -62,6 +62,7 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
 
 async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
     manager.dialog_data["selected_course"] = item_id
+    manager.dialog_data["quantity"] = 1  # Початкове значення кількості
     await callback.answer(f"✅ Ви обрали курс: {item_id}")
     await manager.next()
 
@@ -117,7 +118,7 @@ product_window = Window(
     ),
     Row(
         Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease")),
-        Format("{dialog_data[quantity]}"),
+        DynamicText(lambda data, manager: f"{manager.dialog_data.get('quantity', 1)}"),
         Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase")),
     ),
     Row(
