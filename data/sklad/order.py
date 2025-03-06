@@ -25,3 +25,6 @@ product_window = Window(
     state=OrderSG.show_products,
     getter=get_products
 )
+
+# Створюємо діалог
+order_dialog = Dialog(course_window, product_window)
