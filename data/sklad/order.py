@@ -86,9 +86,9 @@ product_window = Window(
     Format("📦 Товари курсу {dialog_data[selected_course]}:"),
     ScrollingGroup(
         Row(
-            Button(Const("➖"), id=Format("decrease_{item[id]}")),
-            Button(Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"), id=Format("product_{item[id]}")),
-            Button(Const("➕"), id=Format("increase_{item[id]}")),
+            Button(Const("➖"), id=lambda item: f"decrease_{item['id']}"),
+            Button(Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"), id=lambda item: f"product_{item['id']}"),
+            Button(Const("➕"), id=lambda item: f"increase_{item['id']}"),
         ),
         items="products",
         id="products_scroller",
