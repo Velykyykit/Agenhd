@@ -1,114 +1,67 @@
-import os
-import gspread
 import logging
+from aiogram_dialog import Dialog, Window
+from aiogram_dialog.widgets.kbd import Select, Button, Row
+from aiogram_dialog.widgets.text import Const
+from aiogram_dialog.widgets.kbd import Start
+from aiogram_dialog.manager.manager import DialogManager
+from aiogram_dialog.api.exceptions import InvalidWidgetIdError
 from aiogram import types
-from aiogram_dialog import Dialog, Window, DialogManager
-from aiogram_dialog.widgets.kbd import Button, Select, Group
-from aiogram_dialog.widgets.text import Const, Format
-from aiogram.fsm.state import StatesGroup, State
 
-# Конфігурація
-SHEET_SKLAD = os.getenv("SHEET_SKLAD")
-CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
-
-# Логування
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-class OrderDialog(StatesGroup):
-    select_course = State()
-    select_items = State()
-    confirm_order = State()
+# Дві таблиці Google Sheets
+SHEET_DICTIONARY = "dictionary"
+SHEET_SKLAD = "SKLAD"
 
-# Функція отримання курсів у дві колонки
-async def get_courses_in_columns(**kwargs):
-    gc = gspread.service_account(filename=CREDENTIALS_PATH)
-    sh = gc.open_by_key(SHEET_SKLAD)
-    worksheet = sh.worksheet("dictionary")
-    courses = worksheet.get_all_records()
-    formatted_courses = [{"name": c["course"], "short": c["short"]} for c in courses]
-    return {
-        "left_courses": formatted_courses[:10],
-        "right_courses": formatted_courses[10:]
-    }
+async def get_courses(dialog_manager: DialogManager):
+    """Отримання списку курсів"""
+    courses = await dialog_manager.middleware_data["gspread_client"].get_data(SHEET_DICTIONARY)
+    return [{"name": course["course"], "short": course["short"]} for course in courses[:20]]  # Не більше 20 курсів
 
-# Функція отримання товарів для вибраного курсу
-async def get_items(dialog_manager: DialogManager, **kwargs):
+async def get_items(dialog_manager: DialogManager):
+    """Отримання списку товарів для вибраного курсу"""
     selected_course = dialog_manager.dialog_data.get("selected_course")
-
-    # Дебаг логування
     logger.debug(f"[DEBUG] Отримано курс: {selected_course}")
-    print(f"[DEBUG] Отримано курс: {selected_course}")
-
     if not selected_course:
         return {"items": []}
+    
+    sklad = await dialog_manager.middleware_data["gspread_client"].get_data(SHEET_SKLAD)
+    items = [row for row in sklad if row["course"] == selected_course]
+    logger.debug(f"[DEBUG] Знайдено {len(items)} товарів для курсу {selected_course}")
+    return {"items": items}
 
-    gc = gspread.service_account(filename=CREDENTIALS_PATH)
-    sh = gc.open_by_key(SHEET_SKLAD)
-    worksheet = sh.worksheet("SKLAD")
-    data = worksheet.get_all_records()
-
-    filtered_items = [
-        {"id": str(item["id"]), "name": item["name"], "price": item["price"], "quantity": 0}
-        for item in data if item["course"].strip().lower() == selected_course.strip().lower()
-    ]
-
-    # Дебаг логування
-    logger.debug(f"[DEBUG] Знайдено {len(filtered_items)} товарів для курсу {selected_course}")
-    print(f"[DEBUG] Знайдено {len(filtered_items)} товарів для курсу {selected_course}")
-
-    return {"items": filtered_items}
-
-# Функція зміни кількості товарів
-async def change_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str, change: int):
-    cart = manager.dialog_data.setdefault("cart", {})
-    cart[item_id] = max(0, cart.get(item_id, 0) + change)
-    await manager.refresh()
-
-# Діалог вибору курсу та товарів
 order_dialog = Dialog(
     Window(
         Const("📚 Оберіть курс:"),
-        Group(
-            Select(
-                Format("🎓 {item[name]}"), items="left_courses", id="left_course_select",
-                item_id_getter=lambda item: item["short"],
-                on_click=lambda c, w, m, item_id: m.start(OrderDialog.select_items, {"selected_course": item_id})
-            ),
-            Select(
-                Format("🎓 {item[name]}"), items="right_courses", id="right_course_select",
-                item_id_getter=lambda item: item["short"],
-                on_click=lambda c, w, m, item_id: m.start(OrderDialog.select_items, {"selected_course": item_id})
-            ),
-            width=2
+        Select(
+            text=lambda item: f"🎓 {item['name']}",
+            id="select_course",
+            item_id_getter=lambda item: item["short"],
+            items=await get_courses(DialogManager()),
+            on_click=lambda c, w, m, item_id: m.dialog_data.update(selected_course=item_id) or m.switch_to(OrderDialog.select_items)
         ),
-        state=OrderDialog.select_course,
-        getter=get_courses_in_columns,
+        state="OrderDialog:select_course",
     ),
     Window(
         Const("🛍️ Оберіть товари:"),
-        Group(
-            Select(
-                Format("🏷️ {item[name]} - 💰 {item[price]} грн | 🛒 {cart.get(item[id], 0)}"),
-                items="items", id="item_select",
-                item_id_getter=lambda item: item["id"],
-            ),
-            Select(
-                Format("➖"), id="decrease",
-                items="items",
-                item_id_getter=lambda item: item["id"],
-                on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, -1),
-            ),
-            Select(
-                Format("➕"), id="increase",
-                items="items",
-                item_id_getter=lambda item: item["id"],
-                on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, 1),
-            ),
-            width=2
+        Row(
+            *[
+                Button(
+                    Const(f"➕ {item['name']}"),
+                    id=f"add_{item['id']}",
+                    on_click=lambda c, w, m, item_id=item["id"]: change_quantity(c, w, m, item_id, +1)
+                ) for item in (await get_items(DialogManager()))["items"]
+            ]
         ),
-        Button(Const("✅ Оформити замовлення"), id="confirm_order", on_click=lambda c, w, m: m.switch_to(OrderDialog.confirm_order)),
-        state=OrderDialog.select_items,
-        getter=get_items,
+        Button(Const("✅ Оформити замовлення"), id="confirm_order", on_click=confirm_order),
+        state="OrderDialog:select_items",
     )
 )
+
+def change_quantity(c: types.CallbackQuery, w, m: DialogManager, item_id, change):
+    """Зміна кількості товару"""
+    pass
+
+def confirm_order(c: types.CallbackQuery, w, m: DialogManager):
+    """Підтвердження замовлення"""
+    pass
