@@ -37,7 +37,7 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
     
     if "cart" not in dialog_manager.dialog_data:
         dialog_manager.dialog_data["cart"] = {}
-    cart = dialog_manager.dialog_data["cart"]
+    cart = dialog_manager.dialog_data.get("cart", {})
     
     rows = worksheet_sklad.get_all_records()
     products = [
@@ -55,16 +55,14 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
 async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
     selected_course = item_id
     manager.dialog_data["selected_course"] = selected_course
-    if "cart" not in manager.dialog_data:
-        manager.dialog_data["cart"] = {}
+    manager.dialog_data.setdefault("cart", {})
     logging.info(f"[COURSE SELECTED] Користувач {callback.from_user.id} обрав курс: {selected_course}")
     await callback.answer(f"✅ Ви обрали курс: {selected_course}")
     await manager.next()
 
 # Обробка натискання кнопок + і -
 async def update_quantity(callback: types.CallbackQuery, widget, manager: DialogManager):
-    if "cart" not in manager.dialog_data:
-        manager.dialog_data["cart"] = {}
+    manager.dialog_data.setdefault("cart", {})
     cart = manager.dialog_data["cart"]
     action, item_id = callback.data.split("_")  # "plus_123" або "minus_123"
     
@@ -100,11 +98,11 @@ course_window = Window(
 
 # Вікно виводу товарів
 product_window = Window(
-    Format("📦 Товари курсу {selected_course}:")
-    ,
+    Format("📦 Товари курсу {selected_course}:"),
+    
     ScrollingGroup(
         Select(
-            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн | 📦 {cart.get(item[id], 0) if cart else 0} шт"),
+            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн | 📦 {cart.get(item[id], 0)} шт"),
             items="products",
             id="product_select",
             item_id_getter=lambda item: item["id"],
