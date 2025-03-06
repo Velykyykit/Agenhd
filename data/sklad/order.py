@@ -45,13 +45,13 @@ order_dialog = Dialog(
             Column(
                 Select(
                     Format("🎓 {item[name]}"), items="left_courses", id="left_course_select",
-                    item_id_getter=lambda item: item["short"], on_click=select_course
+                    item_id_getter=lambda item: item["short"], on_click=lambda c, w, m, item_id: m.dialog_data.update(selected_course=item_id) or m.switch_to(OrderDialog.select_items)
                 ),
             ),
             Column(
                 Select(
                     Format("🎓 {item[name]}"), items="right_courses", id="right_course_select",
-                    item_id_getter=lambda item: item["short"], on_click=select_course
+                    item_id_getter=lambda item: item["short"], on_click=lambda c, w, m, item_id: m.dialog_data.update(selected_course=item_id) or m.switch_to(OrderDialog.select_items)
                 ),
             ),
         ),
