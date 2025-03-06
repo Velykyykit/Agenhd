@@ -69,10 +69,12 @@ async def select_course(callback: types.CallbackQuery, widget, manager: DialogMa
 async def change_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, action: str):
     """Збільшення або зменшення кількості товару."""
     quantity = manager.dialog_data.get("quantity", 1)
+
     if action == "increase":
         quantity += 1
     elif action == "decrease" and quantity > 1:
         quantity -= 1
+
     manager.dialog_data["quantity"] = quantity
     await callback.answer()
     await manager.dialog().update()
@@ -118,10 +120,10 @@ product_window = Window(
     ),
     
     Row(
-        Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease")),
-        Format("{quantity}"),
-        Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase")),
-    ),
+    Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease")),
+    Button(Format("{dialog_data[quantity]}"), id="quantity_display"),
+    Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase")),
+),
     
     Row(
         Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
