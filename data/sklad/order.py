@@ -32,10 +32,10 @@ async def get_courses(**kwargs):
     now = time.time()
     if now - cache["courses"]["timestamp"] < CACHE_EXPIRY:
         return {"courses": cache["courses"]["data"]}
-
+    
     rows = worksheet_courses.get_all_records()
     courses = [{"name": row["course"], "short": row["short"]} for row in rows][:20]
-
+    
     cache["courses"] = {"data": courses, "timestamp": now}
     return {"courses": courses}
 
@@ -59,10 +59,16 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
 
     return {"products": products}
 
-async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
-    manager.dialog_data["selected_course"] = item_id
-    await callback.answer(f"✅ Ви обрали курс: {item_id}")
-    await manager.next()
+def get_product_rows(data):
+    """Генерує рядки з кнопками товарів"""
+    products = data.get("products", [])
+    return [
+        Row(
+            Button(Const("⠀"), id=f"empty_left_{item['id']}"),  # Ліва пустая кнопка
+            Button(Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"), id=f"product_{item['id']}"),
+            Button(Const("⠀"), id=f"empty_right_{item['id']}")  # Права пустая кнопка
+        ) for item in products
+    ]
 
 course_window = Window(
     Const("📚 Оберіть курс:"),
@@ -83,31 +89,14 @@ course_window = Window(
     getter=get_courses
 )
 
-def get_product_rows(data):
-    """Генерує рядки з кнопками товарів"""
-    products = data.get("products", [])
-    return [
-        Row(
-            Button(Const("⠀"), id=f"empty_left_{item['id']}"),  # Ліва пустая кнопка
-            Button(Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"), id=f"product_{item['id']}"),
-            Button(Const("⠀"), id=f"empty_right_{item['id']}")  # Права пустая кнопка
-        ) for item in products
-    ]
-
 product_window = Window(
     Format("📦 Товари курсу {dialog_data[selected_course]}:"),
-    ScrollingGroup(
-        *get_product_rows,  # Передаємо функцію для динамічного отримання списку товарів
-        id="products_scroller",
-        width=1,
-        height=10,
-        hide_on_single_page=True
-    ),
+    *get_product_rows({"products": []}),  # Викликаємо функцію для генерації кнопок
     Row(
         Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
     ),
     state=OrderSG.show_products,
-    getter=get_products  # Тепер дані правильно передаються через getter
+    getter=get_products  # Передаємо дані через getter
 )
 
 order_dialog = Dialog(course_window, product_window)
