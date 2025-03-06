@@ -2,7 +2,7 @@ import os
 import gspread
 from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
-from aiogram_dialog.widgets.kbd import Button, Row, Column
+from aiogram_dialog.widgets.kbd import Button, Row, Column, Select
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 
@@ -14,14 +14,10 @@ CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
 gc = gspread.service_account(filename=CREDENTIALS_PATH)
 sh = gc.open_by_key(SHEET_SKLAD)
 worksheet_courses = sh.worksheet("dictionary")
-worksheet_items = sh.worksheet("SKLAD")
-
 
 # Класи станів для діалогу
 class OrderSG(StatesGroup):
     select_course = State()
-    select_item = State()
-
 
 # Отримання списку курсів (дві колонки по 10)
 async def get_courses(**kwargs):
@@ -33,31 +29,10 @@ async def get_courses(**kwargs):
 
     return {"col1": col1, "col2": col2}
 
-
-# Отримання списку товарів для вибраного курсу
-async def get_items(dialog_manager: DialogManager, **kwargs):
-    selected_course = dialog_manager.dialog_data.get("selected_course")
-    if not selected_course:
-        return {"items": []}
-
-    all_items = worksheet_items.get_all_records()
-    items = [item for item in all_items if item["course"] == selected_course]
-
-    return {"items": items}
-
-
 # Обробник натискання на курс
 async def select_course(callback: types.CallbackQuery, button: Button, manager: DialogManager):
     manager.dialog_data["selected_course"] = button.widget_id
-    await manager.switch_to(OrderSG.select_item)
-
-
-# Обробник зміни кількості товарів
-async def change_quantity(callback: types.CallbackQuery, button: Button, manager: DialogManager, item_id: str, delta: int):
-    cart = manager.dialog_data.setdefault("cart", {})
-    cart[item_id] = max(cart.get(item_id, 0) + delta, 0)
-    await manager.refresh()
-
+    await manager.done()
 
 # Вікно вибору курсу
 course_window = Window(
@@ -79,24 +54,8 @@ course_window = Window(
         ),
     ),
     state=OrderSG.select_course,
-    getter=get_courses,  # ВАЖЛИВО: Отримує курси тут, а не в `Window`
-)
-
-# Вікно вибору товарів
-item_window = Window(
-    Const("🛍 Виберіть товари:"),
-    Row(
-        Select(
-            Format("{item[name]} - {item[price]} грн 🛒 {cart.get(item[id], 0)} шт"),
-            items="items", id="item_select",
-            item_id_getter=lambda item: item["id"]
-        ),
-        Button(Const("➖"), id="minus_item", on_click=lambda c, w, m: change_quantity(c, w, m, c.data, -1)),
-        Button(Const("➕"), id="plus_item", on_click=lambda c, w, m: change_quantity(c, w, m, c.data, 1)),
-    ),
-    state=OrderSG.select_item,
-    getter=get_items,
+    getter=get_courses,
 )
 
 # Створення діалогу
-order_dialog = Dialog(course_window, item_window)
+order_dialog = Dialog(course_window)
