@@ -1,5 +1,6 @@
 import os
 import gspread
+import logging
 from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
 from aiogram_dialog.widgets.kbd import Button, Select, Group
@@ -9,6 +10,10 @@ from aiogram.fsm.state import StatesGroup, State
 # Конфігурація
 SHEET_SKLAD = os.getenv("SHEET_SKLAD")
 CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
+
+# Логування
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 class OrderDialog(StatesGroup):
     select_course = State()
@@ -30,6 +35,11 @@ async def get_courses_in_columns(**kwargs):
 # Функція отримання товарів для вибраного курсу
 async def get_items(dialog_manager: DialogManager, **kwargs):
     selected_course = dialog_manager.dialog_data.get("selected_course")
+
+    # Дебаг логування
+    logger.debug(f"[DEBUG] Отримано курс: {selected_course}")
+    print(f"[DEBUG] Отримано курс: {selected_course}")
+
     if not selected_course:
         return {"items": []}
 
@@ -40,8 +50,12 @@ async def get_items(dialog_manager: DialogManager, **kwargs):
 
     filtered_items = [
         {"id": str(item["id"]), "name": item["name"], "price": item["price"], "quantity": 0}
-        for item in data if item["course"].strip() == selected_course.strip()
+        for item in data if item["course"].strip().lower() == selected_course.strip().lower()
     ]
+
+    # Дебаг логування
+    logger.debug(f"[DEBUG] Знайдено {len(filtered_items)} товарів для курсу {selected_course}")
+    print(f"[DEBUG] Знайдено {len(filtered_items)} товарів для курсу {selected_course}")
 
     return {"items": filtered_items}
 
@@ -80,13 +94,13 @@ order_dialog = Dialog(
                 item_id_getter=lambda item: item["id"],
             ),
             Select(
-                Format("➖"), id=lambda item: f"minus_{item['id']}",
+                Format("➖"), id="decrease",
                 items="items",
                 item_id_getter=lambda item: item["id"],
                 on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, -1),
             ),
             Select(
-                Format("➕"), id=lambda item: f"plus_{item['id']}",
+                Format("➕"), id="increase",
                 items="items",
                 item_id_getter=lambda item: item["id"],
                 on_click=lambda c, w, m, item_id: change_quantity(c, w, m, item_id, 1),
