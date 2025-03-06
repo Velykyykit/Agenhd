@@ -4,7 +4,7 @@ import time
 from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
 from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Button, Row
-from aiogram_dialog.widgets.text import Const, Format, DynamicText
+from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 
 # Підключення до Google Sheets
