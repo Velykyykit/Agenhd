@@ -42,11 +42,14 @@ async def get_courses(**kwargs):
 async def get_products(dialog_manager: DialogManager, **kwargs):
     selected_course = dialog_manager.dialog_data.get("selected_course", None)
     if not selected_course:
-        return {"products": "❌ Товари не знайдено."}
+        return {"products": "❌ Товари не знайдено.", "quantity": 0}
     
     now = time.time()
     if selected_course in cache["products"] and now - cache["products"][selected_course]["timestamp"] < CACHE_EXPIRY:
-        return {"products": cache["products"][selected_course]["data"]}
+        return {
+            "products": cache["products"][selected_course]["data"],
+            "quantity": dialog_manager.dialog_data.get("quantity", 0)  # Початкова кількість = 0
+        }
     
     rows = worksheet_sklad.get_all_records()
     products = [
@@ -55,18 +58,22 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
     ]
     
     cache["products"][selected_course] = {"data": "\n".join(products), "timestamp": now}
+    
+    # Завжди встановлюємо `quantity = 0`
+    dialog_manager.dialog_data["quantity"] = dialog_manager.dialog_data.get("quantity", 0)
+
     return {
         "products": "\n".join(products),
-        "quantity": 1  # Початкова кількість товару
+        "quantity": dialog_manager.dialog_data["quantity"]
     }
 
 async def change_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, action: str):
     """Збільшення або зменшення кількості товару."""
-    quantity = manager.dialog_data.get("quantity", 1)
+    quantity = manager.dialog_data.get("quantity", 0)
     
     if action == "increase":
         quantity += 1
-    elif action == "decrease" and quantity > 1:
+    elif action == "decrease" and quantity > 0:
         quantity -= 1
     
     manager.dialog_data["quantity"] = quantity
@@ -76,7 +83,7 @@ async def change_quantity(callback: types.CallbackQuery, widget, manager: Dialog
 async def add_to_cart(callback: types.CallbackQuery, widget, manager: DialogManager):
     """Додає вибраний товар у кошик."""
     selected_course = manager.dialog_data.get("selected_course", "❌ Невідомий курс")
-    quantity = manager.dialog_data.get("quantity", 1)
+    quantity = manager.dialog_data.get("quantity", 0)
     await callback.answer(f"✅ Додано {quantity} шт. товару з курсу {selected_course} у кошик!")
 
 course_window = Window(
