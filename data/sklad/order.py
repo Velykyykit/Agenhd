@@ -91,21 +91,10 @@ product_window = Window(
         id="products_scroller",
         hide_on_single_page=True
     ),
-    ScrollingGroup(
-        Select(
-            Row(
-                Button(Const("➖"), id=lambda item: f"decrease_{item['id']}", on_click=lambda c, w, m, item_id: change_quantity(c, w, m, "decrease", item_id)),
-                Format("{dialog_data[products].get(item[id], 0)}"),
-                Button(Const("➕"), id=lambda item: f"increase_{item['id']}", on_click=lambda c, w, m, item_id: change_quantity(c, w, m, "increase", item_id)),
-            ),
-            items="products",
-            id="quantity_control",
-            item_id_getter=lambda item: str(item["id"])
-        ),
-        width=1,
-        height=10,
-        id="quantity_scroller",
-        hide_on_single_page=True
+    Row(
+        Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease", dialog_manager.dialog_data.get("selected_product", "0"))),
+        Format("{dialog_data[products].get(dialog_data[selected_product], 0)}"),
+        Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase", dialog_manager.dialog_data.get("selected_product", "0"))),
     ),
     Row(
         Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
