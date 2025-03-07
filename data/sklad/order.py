@@ -123,28 +123,28 @@ course_window = Window(
     getter=get_courses
 )
 
-# Вікно з товарами – кожен товар має свій рядок з кнопками ➖, відображенням кількості та ➕
+# Вікно з товарами – кожен рядок містить інформацію про товар та кнопки ➖  /  ➕
 product_window = Window(
     Format("📦 Товари курсу {dialog_data[selected_course]}:"),
     ScrollingGroup(
         Row(
-            Button(
-                Format("{item[name]} - {item[price]} грн"),
-                id="info_{item[id]}",
-                on_click=lambda c, w, m, item: None  # Просто інформаційна кнопка
-            ),
+            # Просто відображаємо назву і ціну товару
+            Format("{item[name]} - {item[price]} грн"),
+            # Кнопка зменшення
             Button(
                 Const("➖"),
-                id="decrease_{item[id]}",
+                id="decrease",
                 on_click=lambda c, w, m, item: change_quantity(c, w, m, "decrease", item["id"])
             ),
+            # Відображення поточної кількості (без on_click)
             Button(
                 Format("{dialog_data.quantities[item[id]]}"),
-                id="quantity_{item[id]}"
+                id="quantity_display"
             ),
+            # Кнопка збільшення
             Button(
                 Const("➕"),
-                id="increase_{item[id]}",
+                id="increase",
                 on_click=lambda c, w, m, item: change_quantity(c, w, m, "increase", item["id"])
             )
         ),
