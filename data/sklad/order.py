@@ -33,7 +33,6 @@ async def get_courses(**kwargs):
     now = time.time()
     if now - cache["courses"]["timestamp"] < CACHE_EXPIRY:
         return {"courses": cache["courses"]["data"]}
-    
     rows = worksheet_courses.get_all_records()
     courses = [{"name": row["course"], "short": row["short"]} for row in rows][:20]
     cache["courses"] = {"data": courses, "timestamp": now}
@@ -44,7 +43,6 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
     selected_course = dialog_manager.dialog_data.get("selected_course")
     if not selected_course:
         return {"products": []}
-    
     now = time.time()
     if (selected_course in cache["products"] and 
         now - cache["products"][selected_course]["timestamp"] < CACHE_EXPIRY):
@@ -58,15 +56,18 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
         ]
         cache["products"][selected_course] = {"data": products, "timestamp": now}
     
-    # Ініціалізувати окрему кількість для кожного товару
+    # Ініціалізуємо словник з кількостями для кожного товару
     if "quantities" not in dialog_manager.dialog_data:
         dialog_manager.dialog_data["quantities"] = {prod["id"]: 0 for prod in products}
     else:
         for prod in products:
             if prod["id"] not in dialog_manager.dialog_data["quantities"]:
                 dialog_manager.dialog_data["quantities"][prod["id"]] = 0
-    
-    # Зберігаємо список товарів для подальшого використання
+
+    # За бажанням – можна встановити перший товар як вибраний за замовчуванням
+    if products and "selected_product" not in dialog_manager.dialog_data:
+        dialog_manager.dialog_data["selected_product"] = products[0]["id"]
+
     dialog_manager.dialog_data["products"] = products
     return {"products": products}
 
@@ -76,7 +77,7 @@ async def select_course(callback: types.CallbackQuery, widget, manager: DialogMa
     await callback.answer(f"✅ Ви обрали курс: {item_id}")
     await manager.next()
 
-# Обробка кнопок збільшення/зменшення кількості для конкретного товару
+# Функція для зміни кількості для конкретного товару
 async def change_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, action: str, product_id: str):
     quantities = manager.dialog_data.get("quantities", {})
     current = quantities.get(product_id, 0)
@@ -89,7 +90,7 @@ async def change_quantity(callback: types.CallbackQuery, widget, manager: Dialog
     await callback.answer()
     await manager.show()  # Оновлення вікна
 
-# Підтвердження замовлення – збираємо назви товарів та обрану кількість
+# Підтвердження замовлення – збираємо назви товарів з їх кількістю
 async def confirm_selection(callback: types.CallbackQuery, widget, manager: DialogManager):
     quantities = manager.dialog_data.get("quantities", {})
     products = manager.dialog_data.get("products", [])
@@ -103,7 +104,7 @@ async def confirm_selection(callback: types.CallbackQuery, widget, manager: Dial
     await callback.answer(f"Ваше замовлення:\n{message}")
     await manager.done()
 
-# Вікно вибору курсу (Select використовується для відображення списку курсів)
+# Вікно вибору курсу (Select для списку курсів)
 course_window = Window(
     Const("📚 Оберіть курс:"),
     ScrollingGroup(
@@ -123,28 +124,28 @@ course_window = Window(
     getter=get_courses
 )
 
-# Вікно з товарами: для кожного товару створюється рядок із кнопками «➖», відображенням кількості та «➕»
+# Вікно з товарами: кожен товар відображається як окремий рядок із кнопками «➖», відображенням кількості та «➕»
 product_window = Window(
-    Format("📦 Товари курсу {dialog_data[selected_course]}:"),
+    Format("📦 Товари курсу {dialog_data.selected_course if dialog_data.get('selected_course') else '❓Не вибрано'}:"),
     ScrollingGroup(
         Row(
-            # Відображення інформації про товар: назва та ціна
+            # Інформація про товар
             Format("{item[name]} - {item[price]} грн"),
-            # Кнопка зменшення кількості
+            # Кнопка зменшення
             Button(
                 Const("➖"),
-                id="decrease",
+                id="minus",
                 on_click=lambda c, w, m, item: change_quantity(c, w, m, "decrease", item["id"])
             ),
             # Відображення поточної кількості
             Button(
                 Format("{dialog_data.quantities[item[id]]}"),
-                id="quantity_display"
+                id="display"
             ),
-            # Кнопка збільшення кількості
+            # Кнопка збільшення
             Button(
                 Const("➕"),
-                id="increase",
+                id="plus",
                 on_click=lambda c, w, m, item: change_quantity(c, w, m, "increase", item["id"])
             )
         ),
@@ -155,8 +156,8 @@ product_window = Window(
         hide_on_single_page=True
     ),
     Row(
-        Button(Const("✅ Підтвердити замовлення"), id="confirm_order", on_click=confirm_selection),
-        Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back())
+        Button(Const("🔙 Назад"), id="back", on_click=lambda c, w, m: m.back()),
+        Button(Const("🛒 Замовити"), id="order", on_click=confirm_selection)
     ),
     state=OrderSG.show_products,
     getter=get_products
