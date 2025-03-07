@@ -16,6 +16,8 @@ from config.auth import AuthManager
 # WebApp
 from data.sklad.order import router_catalog
 dp.include_router(router_catalog)
+from data.sklad.order import router_catalog
+dp.include_router(router_catalog)
 
 # Логіка складу
 from data.sklad.sklad import handle_sklad, show_all_stock
