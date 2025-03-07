@@ -129,16 +129,19 @@ product_window = Window(
 )
 
 quantity_window = Window(
-    Format("🖼 Фото товару тут\n📦 Товар: {dialog_data[selected_product]}"),
+    Format("📦 {dialog_data[selected_product_name]}"),
+    
     Row(
         Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease")),
-        Button(Format("{dialog_data[quantity]}"), id="quantity_display"),  # Виправлено
+        Button(Format("{dialog_data[selected_quantity]}"), id="quantity_display", on_click=ask_for_quantity),
         Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase")),
     ),
+
     Row(
-        Button(Const("✅ Підтвердити"), id="confirm_selection", on_click=confirm_selection),
+        Button(Const("✅ Підтвердити"), id="confirm_quantity", on_click=confirm_quantity),
         Button(Const("🔙 Назад"), id="back_to_products", on_click=lambda c, w, m: m.back()),
     ),
+
     state=OrderSG.select_quantity
 )
 
