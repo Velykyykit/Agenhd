@@ -3,7 +3,11 @@ import logging
 import os
 
 from aiogram import Bot, Dispatcher, types, Router, F
-from aiogram.types import ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import (
+    ReplyKeyboardRemove, 
+    InlineKeyboardMarkup, 
+    InlineKeyboardButton
+)
 from aiogram.fsm.storage.memory import MemoryStorage
 
 # Аутентифікація (ваш модуль)
@@ -15,8 +19,10 @@ from data.sklad.sklad import handle_sklad, show_all_stock
 # Клавіатури
 from menu.keyboards import get_phone_keyboard, get_restart_keyboard
 
-# === aiogram-dialog ===
-from aiogram_dialog import setup_dialogs, StartMode, DialogManager
+# === aiogram-dialog (Важливо) ===
+# Замість DialogRegistry імпортуємо setup_dialogs і StartMode
+from aiogram_dialog import setup_dialogs, StartMode
+from aiogram_dialog import DialogManager  # Для анотації типів
 from data.sklad.order import order_dialog, OrderSG  # Ваш діалог
 
 # Перегляд замовлень («Для мене»)
@@ -60,11 +66,12 @@ async def send_welcome(message: types.Message):
 async def handle_contact(message: types.Message):
     """
     Обробляє отриманий контакт і виконує аутентифікацію.
-    Перевіряє, чи контакт належить відправнику.
+    Перевіряє, чи контакт дійсно належить відправнику (contact.user_id).
     """
     if message.contact.user_id != message.from_user.id:
         await message.answer(
-            "❌ Скористайтеся кнопкою '📲 Поділитися номером' для відправки саме вашого номера телефону."
+            "❌ Скористайтеся кнопкою '📲 Поділитися номером' "
+            "для відправки саме вашого номера телефону."
         )
         return
 
@@ -125,39 +132,23 @@ async def restart_handler(message: types.Message):
         reply_markup=await get_restart_keyboard()
     )
 
-# Підключаємо middleware для aiogram-dialog
+# Замість DialogRegistry: підключаємо middleware для aiogram-dialog
+# Це додасть dialog_manager у ваші колбек- та message-обробники
 setup_dialogs(dp)
+
+# Підключаємо ваш діалог до Dispatcher (як router):
 dp.include_router(order_dialog)
 
 @router.callback_query(F.data == "order")
 async def start_order_dialog(call: types.CallbackQuery, dialog_manager: DialogManager):
     """Запуск діалогу для оформлення замовлення."""
     await call.answer()
+    # Запускаємо діалог (OrderSG.select_course)
     await dialog_manager.start(OrderSG.select_course, mode=StartMode.RESET_STACK)
 
-# === Інтеграція веб-сервера FastAPI ===
-from fastapi import FastAPI
-import uvicorn
-
-# Імпортуємо веб-маршрути з модуля data/sklad/order.py
-from data.sklad.order import order_router
-
-# Створюємо FastAPI додаток
-app = FastAPI()
-
-# Головна сторінка веб-сервера
-@app.get("/")
-def root():
-    return {"message": "Hello from Web App & Telegram Bot!"}
-
-# Включаємо маршрути веб-інтерфейсу (вони будуть доступні за префіксом /order)
-app.include_router(order_router, prefix="/order")
-
-# При старті FastAPI запускаємо бота у фоні
-@app.on_event("startup")
-async def on_startup():
-    loop = asyncio.get_event_loop()
-    loop.create_task(dp.start_polling())
+async def main():
+    """Запуск бота в режимі polling."""
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000)
+    asyncio.run(main())
