@@ -8,10 +8,15 @@ from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 
 # Підключення до Google Sheets
-CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
+credentials_json = os.getenv("CREDENTIALS_FILE")
+if credentials_json:
+    credentials_dict = json.loads(credentials_json)
+
+else:
+    raise ValueError("❌ Не знайдено CREDENTIALS_FILE у змінних середовища!")
 SHEET_SKLAD = os.getenv("SHEET_SKLAD")
 
-gc = gspread.service_account(filename=CREDENTIALS_PATH)
+gc = gspread.service_account_from_dict(credentials_dict)
 sh = gc.open_by_key(SHEET_SKLAD)
 worksheet_courses = sh.worksheet("dictionary")
 worksheet_sklad = sh.worksheet("SKLAD")
