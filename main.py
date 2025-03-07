@@ -1,154 +1,145 @@
-import asyncio
-import logging
 import os
+import gspread
+import time
+from aiogram import types
+from aiogram_dialog import Dialog, Window, DialogManager
+from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Button, Row
+from aiogram_dialog.widgets.text import Const, Format
+from aiogram.fsm.state import StatesGroup, State
 
-from aiogram import Bot, Dispatcher, types, Router, F
-from aiogram.types import (
-    ReplyKeyboardRemove, 
-    InlineKeyboardMarkup, 
-    InlineKeyboardButton
-)
-from aiogram.fsm.storage.memory import MemoryStorage
-
-# Аутентифікація (ваш модуль)
-from config.auth import AuthManager
-
-# Логіка складу
-from data.sklad.sklad import handle_sklad, show_all_stock
-
-# Клавіатури
-from menu.keyboards import get_phone_keyboard, get_restart_keyboard
-
-# === aiogram-dialog (Важливо) ===
-# Замість DialogRegistry імпортуємо setup_dialogs і StartMode
-from aiogram_dialog import setup_dialogs, StartMode
-from aiogram_dialog import DialogManager  # Для анотації типів
-from data.sklad.order import order_dialog, OrderSG  # Ваш діалог
-
-# Перегляд замовлень («Для мене»)
-from data.For_me.me import show_my_orders
-
-logging.basicConfig(level=logging.INFO)
-
-TOKEN = os.getenv("TOKEN")
-SHEET_ID = os.getenv("SHEET_ID")
+# Підключення до Google Sheets
+CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
 SHEET_SKLAD = os.getenv("SHEET_SKLAD")
-CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
 
-if not TOKEN or not SHEET_ID or not SHEET_SKLAD or not CREDENTIALS_FILE:
-    raise ValueError("❌ Не знайдено змінні середовища!")
+gc = gspread.service_account(filename=CREDENTIALS_PATH)
+sh = gc.open_by_key(SHEET_SKLAD)
+worksheet_courses = sh.worksheet("dictionary")
+worksheet_sklad = sh.worksheet("SKLAD")
 
-bot = Bot(token=TOKEN)
-storage = MemoryStorage()
-dp = Dispatcher(storage=storage)
-router = Router()
-dp.include_router(router)
+# Кеш для збереження даних
+CACHE_EXPIRY = 300  # 5 хвилин
+cache = {
+    "courses": {"data": [], "timestamp": 0},
+    "products": {"data": {}, "timestamp": 0}
+}
 
-auth_manager = AuthManager(SHEET_ID, CREDENTIALS_FILE)
+# Стан вибору курсу і товару
+class OrderSG(StatesGroup):
+    select_course = State()
+    show_products = State()
+    select_quantity = State()
 
-def get_main_menu():
-    """Головне меню із кнопками."""
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📦 Склад", callback_data="sklad")],
-        [InlineKeyboardButton(text="📝 Завдання", callback_data="tasks")],
-        [InlineKeyboardButton(text="🙋‍♂️ Для мене", callback_data="forme")]
-    ])
+async def get_courses(**kwargs):
+    now = time.time()
+    if now - cache["courses"]["timestamp"] < CACHE_EXPIRY:
+        return {"courses": cache["courses"]["data"]}
+    
+    rows = worksheet_courses.get_all_records()
+    courses = [{"name": row["course"], "short": row["short"]} for row in rows][:20]
+    
+    cache["courses"] = {"data": courses, "timestamp": now}
+    return {"courses": courses}
 
-@router.message(F.text == "/start")
-async def send_welcome(message: types.Message):
-    """Надсилає запит на поділитися номером телефону."""
-    await message.answer(
-        "📲 Поділіться номером для аутентифікації:",
-        reply_markup=await get_phone_keyboard()
-    )
+async def get_products(dialog_manager: DialogManager, **kwargs):
+    selected_course = dialog_manager.dialog_data.get("selected_course", None)
+    if not selected_course:
+        return {"products": []}
+    
+    now = time.time()
+    if selected_course in cache["products"] and now - cache["products"][selected_course]["timestamp"] < CACHE_EXPIRY:
+        return {"products": cache["products"][selected_course]["data"]}
+    
+    rows = worksheet_sklad.get_all_records()
+    products = [
+        {"id": str(index), "name": row["name"], "price": row["price"]}
+        for index, row in enumerate(rows, start=1) if row["course"] == selected_course
+    ]
+    
+    cache["products"][selected_course] = {"data": products, "timestamp": now}
+    return {"products": products}
 
-@router.message(F.contact)
-async def handle_contact(message: types.Message):
-    """
-    Обробляє отриманий контакт і виконує аутентифікацію.
-    Перевіряє, чи контакт дійсно належить відправнику (contact.user_id).
-    """
-    if message.contact.user_id != message.from_user.id:
-        await message.answer(
-            "❌ Скористайтеся кнопкою '📲 Поділитися номером' "
-            "для відправки саме вашого номера телефону."
-        )
-        return
+async def select_course(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
+    manager.dialog_data["selected_course"] = item_id
+    await callback.answer(f"✅ Ви обрали курс: {item_id}")
+    await manager.next()
 
-    phone_number = auth_manager.clean_phone_number(message.contact.phone_number)
-    logging.info(f"[DEBUG] Отримано номер: {phone_number}")
+async def select_product(callback: types.CallbackQuery, widget, manager: DialogManager, item_id: str):
+    """При натисканні на товар відкривається вікно вибору кількості"""
+    manager.dialog_data["selected_product"] = item_id
+    manager.dialog_data["quantity"] = 0  # Початкове значення 0
+    await manager.next()
 
-    try:
-        user_data = await auth_manager.check_user_in_database(phone_number)
-        logging.info(f"[DEBUG] Відповідь від auth.py: {user_data}")
-        if user_data:
-            await message.answer(
-                f"✅ Вітаю, *{user_data['name']}*! Ви успішно ідентифіковані. 🎉",
-                parse_mode="Markdown",
-                reply_markup=ReplyKeyboardRemove()
-            )
-            await message.answer("📌 Оберіть розділ:", reply_markup=get_main_menu())
-            await message.answer(
-                "🔄 Якщо хочете повернутися назад, натисніть кнопку:",
-                reply_markup=await get_restart_keyboard()
-            )
-        else:
-            await message.answer("❌ Ваш номер не знайдено у базі. Зверніться до адміністратора.")
-    except Exception as e:
-        await message.answer("❌ Сталася помилка під час перевірки номера. Спробуйте пізніше.")
-        logging.error(f"❌ ПОМИЛКА: {e}")
+async def change_quantity(callback: types.CallbackQuery, widget, manager: DialogManager, action: str):
+    """Зміна кількості товару"""
+    quantity = manager.dialog_data.get("quantity", 0)
+    if action == "increase":
+        quantity += 1
+    elif action == "decrease" and quantity > 0:
+        quantity -= 1
+    manager.dialog_data["quantity"] = quantity
+    await callback.answer()
+    await manager.show()  # Оновлюємо вікно
 
-@router.callback_query(F.data == "sklad")
-async def handle_sklad_call(call: types.CallbackQuery):
-    """Переходить у розділ 'Склад'."""
-    await call.answer()
-    await handle_sklad(call.message)
+async def confirm_selection(callback: types.CallbackQuery, widget, manager: DialogManager):
+    """Підтвердження вибору кількості"""
+    selected_product = manager.dialog_data.get("selected_product", "❌ Невідомий товар")
+    quantity = manager.dialog_data.get("quantity", 0)
+    await callback.answer(f"✅ Додано {quantity} шт. товару {selected_product} у кошик!")
+    await manager.done()
 
-@router.callback_query(F.data == "check_stock")
-async def handle_stock_check(call: types.CallbackQuery):
-    """Перевіряє наявність товарів (генерує PDF)."""
-    await call.answer()
-    await show_all_stock(call)
+course_window = Window(
+    Const("📚 Оберіть курс:"),
+    ScrollingGroup(
+        Select(
+            Format("🎓 {item[name]}"),
+            items="courses",
+            id="course_select",
+            item_id_getter=lambda item: item["short"],
+            on_click=select_course
+        ),
+        width=2,
+        height=10,
+        id="courses_scroller",
+        hide_on_single_page=True
+    ),
+    state=OrderSG.select_course,
+    getter=get_courses
+)
 
-@router.callback_query(F.data == "tasks")
-async def handle_tasks(call: types.CallbackQuery):
-    """Розділ 'Завдання' (поки в розробці)."""
-    await call.answer()
-    await call.message.answer("📝 Розділ 'Завдання' ще в розробці.")
+product_window = Window(
+    Format("📦 Товари курсу {dialog_data[selected_course]}:"),
+    ScrollingGroup(
+        Select(
+            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн"),
+            items="products",
+            id="product_select",
+            item_id_getter=lambda item: item["id"],
+            on_click=select_product
+        ),
+        width=1,
+        height=10,
+        id="products_scroller",
+        hide_on_single_page=True
+    ),
+    Row(
+        Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
+    ),
+    state=OrderSG.show_products,
+    getter=get_products
+)
 
-@router.callback_query(F.data == "forme")
-async def handle_forme(call: types.CallbackQuery):
-    """Розділ 'Для мене' – перегляд замовлень."""
-    await call.answer()
-    await show_my_orders(call.message)
+quantity_window = Window(
+    Format("🖼 Фото товару тут\n📦 Товар: {dialog_data[selected_product]}"),
+    Row(
+        Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease")),
+        Button(Format("{dialog_data[quantity]}"), id="quantity_display"),  # Виправлено
+        Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase")),
+    ),
+    Row(
+        Button(Const("✅ Підтвердити"), id="confirm_selection", on_click=confirm_selection),
+        Button(Const("🔙 Назад"), id="back_to_products", on_click=lambda c, w, m: m.back()),
+    ),
+    state=OrderSG.select_quantity
+)
 
-@router.message(F.text == "🔄 Почати спочатку")
-async def restart_handler(message: types.Message):
-    """Кнопка 'Почати спочатку' повертає користувача в головне меню."""
-    await message.answer("🔄 Починаємо спочатку", reply_markup=ReplyKeyboardRemove())
-    await message.answer("📌 Оберіть розділ:", reply_markup=get_main_menu())
-    await message.answer(
-        "🔄 Якщо хочете повернутися назад, натисніть кнопку:",
-        reply_markup=await get_restart_keyboard()
-    )
-
-# Замість DialogRegistry: підключаємо middleware для aiogram-dialog
-# Це додасть dialog_manager у ваші колбек- та message-обробники
-setup_dialogs(dp)
-
-# Підключаємо ваш діалог до Dispatcher (як router):
-dp.include_router(order_dialog)
-
-@router.callback_query(F.data == "order")
-async def start_order_dialog(call: types.CallbackQuery, dialog_manager: DialogManager):
-    """Запуск діалогу для оформлення замовлення."""
-    await call.answer()
-    # Запускаємо діалог (OrderSG.select_course)
-    await dialog_manager.start(OrderSG.select_course, mode=StartMode.RESET_STACK)
-
-async def main():
-    """Запуск бота в режимі polling."""
-    await dp.start_polling(bot)
-
-if __name__ == "__main__":
-    asyncio.run(main())
+order_dialog = Dialog(course_window, product_window, quantity_window)
