@@ -6,7 +6,8 @@ from aiogram import Bot, Dispatcher, types, Router, F
 from aiogram.types import (
     ReplyKeyboardRemove, 
     InlineKeyboardMarkup, 
-    InlineKeyboardButton
+    InlineKeyboardButton,
+    WebAppInfo
 )
 from aiogram.fsm.storage.memory import MemoryStorage
 
