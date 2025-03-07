@@ -1,5 +1,3 @@
-# data/sklad/order.py
-
 import os
 import time
 import gspread
@@ -139,12 +137,12 @@ quantity_window = Window(
 
 order_dialog = Dialog(course_window, product_window, quantity_window)
 
-# === Веб-інтерфейс через FastAPI ===
+# === Веб-інтерфейс через FastAPI (залишається без змін) ===
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-router = APIRouter()
+web_router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 # In-memory дані для веб-інтерфейсу:
@@ -164,11 +162,11 @@ web_products = {
 }
 web_cart = {}  # In-memory "кошик" для веб-інтерфейсу
 
-@router.get("/", response_class=HTMLResponse)
+@web_router.get("/", response_class=HTMLResponse)
 def order_index(request: Request):
     return templates.TemplateResponse("order_index.html", {"request": request, "courses": web_courses})
 
-@router.get("/course/{course_id}", response_class=HTMLResponse)
+@web_router.get("/course/{course_id}", response_class=HTMLResponse)
 def course_page(request: Request, course_id: int):
     items = web_products.get(course_id, [])
     cart_items = {item["id"]: web_cart.get(item["id"], 0) for item in items}
@@ -181,7 +179,7 @@ def course_page(request: Request, course_id: int):
         "cart_items": cart_items
     })
 
-@router.post("/update_cart", response_class=HTMLResponse)
+@web_router.post("/update_cart", response_class=HTMLResponse)
 def update_cart(request: Request, course_id: int = Form(...), item_id: int = Form(...), action: str = Form(...)):
     current_qty = web_cart.get(item_id, 0)
     if action == "plus":
@@ -200,7 +198,7 @@ def update_cart(request: Request, course_id: int = Form(...), item_id: int = For
         "cart_items": cart_items
     })
 
-@router.post("/confirm", response_class=HTMLResponse)
+@web_router.post("/confirm", response_class=HTMLResponse)
 def confirm_order(request: Request, course_id: int = Form(...)):
     items = web_products.get(course_id, [])
     chosen = []
@@ -210,26 +208,21 @@ def confirm_order(request: Request, course_id: int = Form(...)):
             chosen.append((item["name"], qty))
     return templates.TemplateResponse("order_confirm.html", {"request": request, "chosen": chosen})
 
-# Експортуємо роутер для FastAPI-додатку
-order_router = router
+# Експортуємо веб-роутер для FastAPI-додатку
+order_router = web_router
 
-# === Новий хендлер для відкриття Telegram Mini App (каталогу) ===
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
-from aiogram.filters import Command
-
-async def open_catalog_webapp(message: types.Message):
-    """
-    Надсилає повідомлення з кнопкою, яка відкриває веб-інтерфейс каталогу як Telegram Mini App.
-    """
-    # Задайте URL для вашого веб-інтерфейсу. Якщо ви використовуєте FastAPI, то це може виглядати так:
-    web_app_url = "https://yourdomain.com/order/"  # Замініть на реальний HTTPS URL!
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Відкрити каталог", web_app=WebAppInfo(url=web_app_url))]
-    ])
-    await message.answer("Натисніть кнопку нижче, щоб відкрити каталог через Mini App:", reply_markup=keyboard)
+# === Роутер для Telegram Mini App (WebApp) ===
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from aiogram.filters import Command  # якщо потрібен, але тут ми використовуємо callback
 
 router_catalog = Router()
 
-@router_catalog.message(Command("open_catalog"))
-async def cmd_open_catalog(message: types.Message):
-    await open_catalog_webapp(message)
+@router_catalog.callback_query(lambda c: c.data == "order")
+async def open_order_webapp(call: types.CallbackQuery):
+    await call.answer()
+    # Вкажіть URL вашого веб-інтерфейсу, де розміщено Web App (HTTPS!)
+    web_app_url = "https://velykyykit.github.io/telegram-mini-app/"  # Замініть на ваш URL, якщо потрібно
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Зробити замовлення", web_app=WebAppInfo(url=web_app_url))]
+    ])
+    await call.message.answer("Натисніть кнопку нижче, щоб зробити замовлення:", reply_markup=keyboard)
