@@ -215,7 +215,7 @@ order_router = router
 
 # === Новий хендлер для відкриття Telegram Mini App (каталогу) ===
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
-from aiogram.dispatcher.filters import Command
+from aiogram.filters import Command
 
 async def open_catalog_webapp(message: types.Message):
     """
