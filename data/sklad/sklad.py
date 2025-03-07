@@ -6,6 +6,7 @@ from datetime import datetime
 import pytz
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, CallbackQuery
 from menu.keyboards import get_restart_keyboard
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 
 # Налаштування часової зони для Києва
 kyiv_tz = pytz.timezone("Europe/Kiev")
@@ -16,7 +17,10 @@ FONT_PATH = os.path.join("/app/config/fonts", "DejaVuSans.ttf")
 async def get_sklad_menu():
     """Меню для розділу складу."""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🛒 Зробити Замовлення", callback_data="order")],
+        [InlineKeyboardButton(
+            text="🛒 Зробити Замовлення",
+            web_app=WebAppInfo(url="https://your-bot-server.com/webapp/")
+        )],
         [InlineKeyboardButton(text="📊 Перевірити Наявність", callback_data="check_stock")]
     ])
 
