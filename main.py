@@ -3,17 +3,26 @@ import logging
 import os
 
 from aiogram import Bot, Dispatcher, types, Router, F
-from aiogram.types import (
-    ReplyKeyboardRemove, 
-    InlineKeyboardMarkup, 
-    InlineKeyboardButton,
-    WebAppInfo
-)
+from aiogram.types import ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.storage.memory import MemoryStorage
 
-# Аутентифікація (ваш модуль)
+# Аутентифікація
 from config.auth import AuthManager
 
+# Логіка складу
+from data.sklad.sklad import handle_sklad, show_all_stock
+
+# Клавіатури
+from menu.keyboards import get_phone_keyboard, get_restart_keyboard
+
+# aiogram-dialog
+from aiogram_dialog import setup_dialogs, StartMode, DialogManager
+from data.sklad.order import order_dialog, OrderSG
+
+# Перегляд замовлень («Для мене»)
+from data.For_me.me import show_my_orders
+
+# Логування
 logging.basicConfig(level=logging.INFO)
 
 # Отримання змінних середовища
@@ -25,30 +34,12 @@ CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
 if not TOKEN or not SHEET_ID or not SHEET_SKLAD or not CREDENTIALS_FILE:
     raise ValueError("❌ Не знайдено змінні середовища!")
 
-# Створення бота, зберігання та диспетчера
+# Створення бота та диспетчера
 bot = Bot(token=TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 router = Router()
 dp.include_router(router)
-
-# Підключення роутера для Telegram Mini App (відкриття каталогу)
-from data.sklad.order import router_catalog
-dp.include_router(router_catalog)
-
-# Логіка складу
-from data.sklad.sklad import handle_sklad, show_all_stock
-
-# Клавіатури
-from menu.keyboards import get_phone_keyboard, get_restart_keyboard
-
-# === aiogram-dialog ===
-from aiogram_dialog import setup_dialogs, StartMode
-from aiogram_dialog import DialogManager  # Для анотації типів
-from data.sklad.order import order_dialog, OrderSG  # Ваш діалог
-
-# Перегляд замовлень («Для мене»)
-from data.For_me.me import show_my_orders
 
 auth_manager = AuthManager(SHEET_ID, CREDENTIALS_FILE)
 
@@ -58,7 +49,6 @@ def get_main_menu():
         [InlineKeyboardButton(text="📦 Склад", callback_data="sklad")],
         [InlineKeyboardButton(text="📝 Завдання", callback_data="tasks")],
         [InlineKeyboardButton(text="🙋‍♂️ Для мене", callback_data="forme")]
-        # Більше кнопки "Каталог" тут не потрібна
     ])
 
 @router.message(F.text == "/start")
@@ -71,10 +61,7 @@ async def send_welcome(message: types.Message):
 
 @router.message(F.contact)
 async def handle_contact(message: types.Message):
-    """
-    Обробляє отриманий контакт і виконує аутентифікацію.
-    Перевіряє, чи контакт дійсно належить відправнику.
-    """
+    """Обробка аутентифікації користувача."""
     if message.contact.user_id != message.from_user.id:
         await message.answer(
             "❌ Скористайтеся кнопкою '📲 Поділитися номером' для відправки саме вашого номера телефону."
@@ -112,13 +99,13 @@ async def handle_sklad_call(call: types.CallbackQuery):
 
 @router.callback_query(F.data == "check_stock")
 async def handle_stock_check(call: types.CallbackQuery):
-    """Перевіряє наявність товарів (генерує PDF)."""
+    """Перевіряє наявність товарів."""
     await call.answer()
     await show_all_stock(call)
 
 @router.callback_query(F.data == "tasks")
 async def handle_tasks(call: types.CallbackQuery):
-    """Розділ 'Завдання' (поки в розробці)."""
+    """Розділ 'Завдання'."""
     await call.answer()
     await call.message.answer("📝 Розділ 'Завдання' ще в розробці.")
 
@@ -138,7 +125,7 @@ async def restart_handler(message: types.Message):
         reply_markup=await get_restart_keyboard()
     )
 
-# Підключаємо middleware для aiogram-dialog (setup_dialogs додає dialog_manager до обробників)
+# Підключаємо middleware для aiogram-dialog
 setup_dialogs(dp)
 
 # Підключаємо діалог для оформлення замовлення
