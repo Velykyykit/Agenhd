@@ -13,9 +13,25 @@ from aiogram.fsm.storage.memory import MemoryStorage
 # Аутентифікація (ваш модуль)
 from config.auth import AuthManager
 
-# WebApp
-from data.sklad.order import router_catalog
-dp.include_router(router_catalog)
+logging.basicConfig(level=logging.INFO)
+
+# Отримання змінних середовища
+TOKEN = os.getenv("TOKEN")
+SHEET_ID = os.getenv("SHEET_ID")
+SHEET_SKLAD = os.getenv("SHEET_SKLAD")
+CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
+
+if not TOKEN or not SHEET_ID or not SHEET_SKLAD or not CREDENTIALS_FILE:
+    raise ValueError("❌ Не знайдено змінні середовища!")
+
+# Створення бота, зберігання та диспетчера
+bot = Bot(token=TOKEN)
+storage = MemoryStorage()
+dp = Dispatcher(storage=storage)
+router = Router()
+dp.include_router(router)
+
+# Підключення роутера для Telegram Mini App (відкриття каталогу)
 from data.sklad.order import router_catalog
 dp.include_router(router_catalog)
 
@@ -25,30 +41,13 @@ from data.sklad.sklad import handle_sklad, show_all_stock
 # Клавіатури
 from menu.keyboards import get_phone_keyboard, get_restart_keyboard
 
-# === aiogram-dialog (Важливо) ===
-# Замість DialogRegistry імпортуємо setup_dialogs і StartMode
+# === aiogram-dialog ===
 from aiogram_dialog import setup_dialogs, StartMode
 from aiogram_dialog import DialogManager  # Для анотації типів
 from data.sklad.order import order_dialog, OrderSG  # Ваш діалог
 
 # Перегляд замовлень («Для мене»)
 from data.For_me.me import show_my_orders
-
-logging.basicConfig(level=logging.INFO)
-
-TOKEN = os.getenv("TOKEN")
-SHEET_ID = os.getenv("SHEET_ID")
-SHEET_SKLAD = os.getenv("SHEET_SKLAD")
-CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
-
-if not TOKEN or not SHEET_ID or not SHEET_SKLAD or not CREDENTIALS_FILE:
-    raise ValueError("❌ Не знайдено змінні середовища!")
-
-bot = Bot(token=TOKEN)
-storage = MemoryStorage()
-dp = Dispatcher(storage=storage)
-router = Router()
-dp.include_router(router)
 
 auth_manager = AuthManager(SHEET_ID, CREDENTIALS_FILE)
 
@@ -72,12 +71,11 @@ async def send_welcome(message: types.Message):
 async def handle_contact(message: types.Message):
     """
     Обробляє отриманий контакт і виконує аутентифікацію.
-    Перевіряє, чи контакт дійсно належить відправнику (contact.user_id).
+    Перевіряє, чи контакт дійсно належить відправнику.
     """
     if message.contact.user_id != message.from_user.id:
         await message.answer(
-            "❌ Скористайтеся кнопкою '📲 Поділитися номером' "
-            "для відправки саме вашого номера телефону."
+            "❌ Скористайтеся кнопкою '📲 Поділитися номером' для відправки саме вашого номера телефону."
         )
         return
 
@@ -138,18 +136,16 @@ async def restart_handler(message: types.Message):
         reply_markup=await get_restart_keyboard()
     )
 
-# Замість DialogRegistry: підключаємо middleware для aiogram-dialog
-# Це додасть dialog_manager у ваші колбек- та message-обробники
+# Підключаємо middleware для aiogram-dialog (setup_dialogs додає dialog_manager до обробників)
 setup_dialogs(dp)
 
-# Підключаємо ваш діалог до Dispatcher (як router):
+# Підключаємо діалог для оформлення замовлення
 dp.include_router(order_dialog)
 
 @router.callback_query(F.data == "order")
 async def start_order_dialog(call: types.CallbackQuery, dialog_manager: DialogManager):
     """Запуск діалогу для оформлення замовлення."""
     await call.answer()
-    # Запускаємо діалог (OrderSG.select_course)
     await dialog_manager.start(OrderSG.select_course, mode=StartMode.RESET_STACK)
 
 async def main():
