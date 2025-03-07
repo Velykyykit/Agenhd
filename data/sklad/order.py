@@ -1,9 +1,9 @@
-# === Частина для Telegram-діалогів (залишається без змін) ===
+# data/sklad/order.py
 
 import os
-import gspread
 import time
-from aiogram import types
+import gspread
+from aiogram import types, Router
 from aiogram_dialog import Dialog, Window, DialogManager
 from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Button, Row
 from aiogram_dialog.widgets.text import Const, Format
@@ -139,7 +139,7 @@ quantity_window = Window(
 
 order_dialog = Dialog(course_window, product_window, quantity_window)
 
-# === Додатково: Веб-інтерфейс через FastAPI ===
+# === Веб-інтерфейс через FastAPI ===
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -147,8 +147,7 @@ from fastapi.templating import Jinja2Templates
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# Якщо у вас є окремі дані для веб-інтерфейсу (можна інтегрувати з Google Sheets чи використовувати ті ж дані),
-# для простоти нижче використаємо in-memory дані:
+# In-memory дані для веб-інтерфейсу:
 web_courses = {
     1: {"name": "Курс A"},
     2: {"name": "Курс B"}
@@ -211,5 +210,26 @@ def confirm_order(request: Request, course_id: int = Form(...)):
             chosen.append((item["name"], qty))
     return templates.TemplateResponse("order_confirm.html", {"request": request, "chosen": chosen})
 
-# Експортуємо роутер для включення у FastAPI-додаток
+# Експортуємо роутер для FastAPI-додатку
 order_router = router
+
+# === Новий хендлер для відкриття Telegram Mini App (каталогу) ===
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from aiogram.dispatcher.filters import Command
+
+async def open_catalog_webapp(message: types.Message):
+    """
+    Надсилає повідомлення з кнопкою, яка відкриває веб-інтерфейс каталогу як Telegram Mini App.
+    """
+    # Задайте URL для вашого веб-інтерфейсу. Якщо ви використовуєте FastAPI, то це може виглядати так:
+    web_app_url = "https://yourdomain.com/order/"  # Замініть на реальний HTTPS URL!
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Відкрити каталог", web_app=WebAppInfo(url=web_app_url))]
+    ])
+    await message.answer("Натисніть кнопку нижче, щоб відкрити каталог через Mini App:", reply_markup=keyboard)
+
+router_catalog = Router()
+
+@router_catalog.message(Command("open_catalog"))
+async def cmd_open_catalog(message: types.Message):
+    await open_catalog_webapp(message)
