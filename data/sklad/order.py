@@ -103,7 +103,7 @@ async def confirm_selection(callback: types.CallbackQuery, widget, manager: Dial
     await callback.answer(f"Ваше замовлення:\n{message}")
     await manager.done()
 
-# Вікно вибору курсу (використовуємо Select, який підтримує item_id_getter)
+# Вікно вибору курсу (Select використовується для відображення списку курсів)
 course_window = Window(
     Const("📚 Оберіть курс:"),
     ScrollingGroup(
@@ -123,32 +123,37 @@ course_window = Window(
     getter=get_courses
 )
 
-# Вікно з товарами – кожен рядок містить інформацію про товар та кнопки ➖  /  ➕
+# Вікно з товарами: для кожного товару створюється рядок з інформацією і кнопками ➖  /  ➕
 product_window = Window(
     Format("📦 Товари курсу {dialog_data[selected_course]}:"),
     ScrollingGroup(
-        Row(
-            # Просто відображаємо назву і ціну товару
-            Format("{item[name]} - {item[price]} грн"),
-            # Кнопка зменшення
-            Button(
-                Const("➖"),
-                id="decrease",
-                on_click=lambda c, w, m, item: change_quantity(c, w, m, "decrease", item["id"])
+        # Select отримує список товарів і відображає кожен рядок згідно з шаблоном (Row)
+        Select(
+            widget=Row(
+                # Відображаємо назву та ціну товару
+                Format("{item[name]} - {item[price]} грн"),
+                # Кнопка зменшення кількості
+                Button(
+                    Const("➖"),
+                    id="decrease",
+                    on_click=lambda c, w, m, item: change_quantity(c, w, m, "decrease", item["id"])
+                ),
+                # Відображення поточної кількості
+                Button(
+                    Format("{dialog_data.quantities[item[id]]}"),
+                    id="quantity_display"
+                ),
+                # Кнопка збільшення кількості
+                Button(
+                    Const("➕"),
+                    id="increase",
+                    on_click=lambda c, w, m, item: change_quantity(c, w, m, "increase", item["id"])
+                )
             ),
-            # Відображення поточної кількості (без on_click)
-            Button(
-                Format("{dialog_data.quantities[item[id]]}"),
-                id="quantity_display"
-            ),
-            # Кнопка збільшення
-            Button(
-                Const("➕"),
-                id="increase",
-                on_click=lambda c, w, m, item: change_quantity(c, w, m, "increase", item["id"])
-            )
+            items="products",
+            id="product_select",
+            item_id_getter=lambda item: item["id"]
         ),
-        items="products",
         width=1,
         height=10,
         id="products_scroller",
