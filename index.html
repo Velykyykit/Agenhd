@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Каталог кусів</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: #f7f7f7;
+      color: #000;
+    }
+    .container {
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .catalog-item {
+      background: #fff;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .catalog-item h2 {
+      margin: 0 0 10px 0;
+    }
+    .catalog-item p {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Каталог кусів</h1>
+    <div id="catalog">
+      <p>Завантаження...</p>
+    </div>
+  </div>
+
+  <script>
+    const apiUrl = "https://your-bot-server.com/api/get_courses"; // Змініть на ваш сервер
+
+    async function fetchCatalog() {
+      try {
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+        const catalogDiv = document.getElementById("catalog");
+        catalogDiv.innerHTML = ""; 
+
+        data.courses.forEach(item => {
+          const itemDiv = document.createElement("div");
+          itemDiv.className = "catalog-item";
+          itemDiv.innerHTML = `
+            <h2>${item.name}</h2>
+            <p>${item.description}</p>
+            <p><strong>Ціна:</strong> ${item.price} грн</p>
+          `;
+          catalogDiv.appendChild(itemDiv);
+        });
+      } catch (error) {
+        console.error("Помилка отримання каталогу:", error);
+        document.getElementById("catalog").innerHTML = "<p>Помилка завантаження</p>";
+      }
+    }
+
+    fetchCatalog();
+  </script>
+</body>
+</html>
