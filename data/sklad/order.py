@@ -3,7 +3,7 @@ import gspread
 import time
 from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
-from aiogram_dialog.widgets.kbd import ScrollingGroup, Button, Row
+from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Button, Row
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 
@@ -58,7 +58,7 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
         ]
         cache["products"][selected_course] = {"data": products, "timestamp": now}
     
-    # Ініціалізувати окрему кількість для кожного товару (якщо ще не зроблено)
+    # Ініціалізувати окрему кількість для кожного товару
     if "quantities" not in dialog_manager.dialog_data:
         dialog_manager.dialog_data["quantities"] = {prod["id"]: 0 for prod in products}
     else:
@@ -66,7 +66,7 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
             if prod["id"] not in dialog_manager.dialog_data["quantities"]:
                 dialog_manager.dialog_data["quantities"][prod["id"]] = 0
     
-    # Для подальшого використання зберігаємо список товарів
+    # Зберігаємо список товарів для подальшого використання
     dialog_manager.dialog_data["products"] = products
     return {"products": products}
 
@@ -103,15 +103,16 @@ async def confirm_selection(callback: types.CallbackQuery, widget, manager: Dial
     await callback.answer(f"Ваше замовлення:\n{message}")
     await manager.done()
 
-# Вікно вибору курсу
+# Вікно вибору курсу (використовуємо Select, який підтримує item_id_getter)
 course_window = Window(
     Const("📚 Оберіть курс:"),
     ScrollingGroup(
-        Button(
+        Select(
             Format("🎓 {item[name]}"),
-            id="course_{item[short]}",
-            on_click=select_course,
-            item_id_getter=lambda item: item["short"]
+            items="courses",
+            id="course_select",
+            item_id_getter=lambda item: item["short"],
+            on_click=select_course
         ),
         width=2,
         height=10,
@@ -122,29 +123,25 @@ course_window = Window(
     getter=get_courses
 )
 
-# Вікно з товарами – для кожного товару виводиться рядок з інформацією та кнопками «➖ 10 ➕»
+# Вікно з товарами – кожен товар має свій рядок з кнопками ➖, відображенням кількості та ➕
 product_window = Window(
     Format("📦 Товари курсу {dialog_data[selected_course]}:"),
     ScrollingGroup(
         Row(
-            # Інформація про товар (назва та ціна)
             Button(
                 Format("{item[name]} - {item[price]} грн"),
                 id="info_{item[id]}",
-                on_click=lambda c, w, m: None  # Немає обробника для простої інформації
+                on_click=lambda c, w, m, item: None  # Просто інформаційна кнопка
             ),
-            # Кнопка зменшення кількості; тут використовується item з поточного рядка
             Button(
                 Const("➖"),
                 id="decrease_{item[id]}",
                 on_click=lambda c, w, m, item: change_quantity(c, w, m, "decrease", item["id"])
             ),
-            # Відображення поточної кількості; кнопка без on_click
             Button(
                 Format("{dialog_data.quantities[item[id]]}"),
                 id="quantity_{item[id]}"
             ),
-            # Кнопка збільшення кількості
             Button(
                 Const("➕"),
                 id="increase_{item[id]}",
