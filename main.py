@@ -57,13 +57,8 @@ def get_main_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📦 Склад", callback_data="sklad")],
         [InlineKeyboardButton(text="📝 Завдання", callback_data="tasks")],
-        [InlineKeyboardButton(text="🙋‍♂️ Для мене", callback_data="forme")],
-        [
-            InlineKeyboardButton(
-                text="🛍 Каталог", 
-                web_app=WebAppInfo(url="https://velykyykit.github.io/telegram-mini-app/")
-            )
-        ]
+        [InlineKeyboardButton(text="🙋‍♂️ Для мене", callback_data="forme")]
+        # Більше кнопки "Каталог" тут не потрібна
     ])
 
 @router.message(F.text == "/start")
