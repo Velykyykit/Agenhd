@@ -125,41 +125,32 @@ course_window = Window(
 
 # Вікно з товарами: для кожного товару створюється рядок із кнопками «➖», відображенням кількості та «➕»
 product_window = Window(
-    Format("📦 Товари курсу {dialog_data[selected_course]}:"),
+    Format("📦 Товари курсу {dialog_data[selected_course] if dialog_data.get('selected_course') else '❓Не вибрано'}:"),
+
     ScrollingGroup(
-        item_widget=Row(
-            # Відображення інформації про товар
-            Format("{item[name]} - {item[price]} грн"),
-            # Кнопка зменшення кількості
-            Button(
-                Const("➖"),
-                id="decrease",
-                on_click=lambda c, w, m, item: change_quantity(c, w, m, "decrease", item["id"])
-            ),
-            # Відображення поточної кількості
-            Button(
-                Format("{dialog_data.quantities[item[id]]}"),
-                id="quantity_display"
-            ),
-            # Кнопка збільшення кількості
-            Button(
-                Const("➕"),
-                id="increase",
-                on_click=lambda c, w, m, item: change_quantity(c, w, m, "increase", item["id"])
-            )
+        Select(
+            Format("🆔 {item[id]} | {item[name]} - 💰 {item[price]} грн | 📦 {dialog_data['cart'].get(item['id'], 0)} шт"),
+            items="products",
+            id="product_select",
+            item_id_getter=lambda item: item["id"],
         ),
-        items="products",
         width=1,
-        height=10,
         id="products_scroller",
         hide_on_single_page=True
     ),
-    Row(
-        Button(Const("✅ Підтвердити замовлення"), id="confirm_order", on_click=confirm_selection),
-        Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
+
+    Group(
+        Button(Const("➖"), id="minus_button", on_click=update_quantity),
+        Button(Const("➕"), id="plus_button", on_click=update_quantity),
+        width=2
     ),
+
+    Button(Const("🔙 Назад"), id="back_to_courses", on_click=lambda c, w, m: m.back()),
+    Button(Const("🛒 Додати в кошик"), id="add_to_cart", on_click=lambda c, w, m: c.answer("🔹 Заглушка: Додано в кошик")),
+
     state=OrderSG.show_products,
     getter=get_products
 )
+
 
 order_dialog = Dialog(course_window, product_window)
