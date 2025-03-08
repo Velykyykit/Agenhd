@@ -5,19 +5,18 @@ import asyncio
 from fpdf import FPDF
 from datetime import datetime
 import pytz
-from aiogram import types  # ✅ Додано імпорт types
+from aiogram import types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, CallbackQuery, WebAppInfo
 from menu.keyboards import get_restart_keyboard
+from urllib.parse import urlencode
 
 # Налаштування часової зони для Києва
 kyiv_tz = pytz.timezone("Europe/Kiev")
 
 # Завантаження облікових даних із JSON-рядка
 CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
-
 if not CREDENTIALS_FILE:
     raise ValueError("❌ Змінна CREDENTIALS_FILE не знайдена!")
-
 try:
     CREDENTIALS_JSON = json.loads(CREDENTIALS_FILE)
 except json.JSONDecodeError as e:
@@ -25,19 +24,32 @@ except json.JSONDecodeError as e:
 
 FONT_PATH = os.path.join("/app/config/fonts", "DejaVuSans.ttf")
 
-async def get_sklad_menu():
-    """Меню для розділу складу."""
+async def get_sklad_menu(user: types.User):
+    """
+    Меню для розділу складу.
+    Формує URL для WebApp, додаючи query-параметри з ім'ям та телефоном користувача.
+    """
+    user_name = user.first_name  # або можна використовувати повне ім'я (наприклад, first_name + last_name)
+    # Тут потрібно отримати телефон користувача, який був отриманий при аутентифікації.
+    # Замінимо placeholder на реальне значення, якщо воно зберігається, наприклад, в базі даних чи state.
+    user_phone = "YOUR_PHONE_NUMBER"  # замініть на отримане значення
+
+    # Формуємо URL з параметрами
+    params = urlencode({"name": user_name, "phone": user_phone})
+    url = f"https://velykyykit.github.io/Agenhd/webapp/order/order.html?{params}"
+    
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text="🛒 Зробити Замовлення",
-            web_app=WebAppInfo(url="https://velykyykit.github.io/Agenhd/webapp/order/order.html")
+            web_app=WebAppInfo(url=url)
         )],
         [InlineKeyboardButton(text="📊 Перевірити Наявність", callback_data="check_stock")]
     ])
 
 async def handle_sklad(message: types.Message):
     """Обробка розділу складу."""
-    await message.answer("📦 Ви у розділі складу. Оберіть дію:", reply_markup=await get_sklad_menu())
+    # Передаємо об'єкт користувача для формування URL з параметрами
+    await message.answer("📦 Ви у розділі складу. Оберіть дію:", reply_markup=await get_sklad_menu(message.from_user))
 
 async def get_all_stock():
     """Отримання даних складу."""
