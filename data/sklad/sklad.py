@@ -24,17 +24,14 @@ except json.JSONDecodeError as e:
 
 FONT_PATH = os.path.join("/app/config/fonts", "DejaVuSans.ttf")
 
-async def get_sklad_menu(user: types.User):
+async def get_sklad_menu(user_data: dict):
     """
-    Меню для розділу складу.
-    Формує URL для WebApp, додаючи query-параметри з ім'ям та телефоном користувача.
+    Формує меню для розділу складу.
+    URL WebApp отримує query-параметри з ім'ям та телефоном користувача.
     """
-    user_name = user.first_name  # або можна використовувати повне ім'я (наприклад, first_name + last_name)
-    # Тут потрібно отримати телефон користувача, який був отриманий при аутентифікації.
-    # Замінимо placeholder на реальне значення, якщо воно зберігається, наприклад, в базі даних чи state.
-    user_phone = "YOUR_PHONE_NUMBER"  # замініть на отримане значення
-
-    # Формуємо URL з параметрами
+    # Використовуємо дані з user_data (словника)
+    user_name = user_data.get("name", "незнайомий")
+    user_phone = user_data.get("phone", "не вказано")
     params = urlencode({"name": user_name, "phone": user_phone})
     url = f"https://velykyykit.github.io/Agenhd/webapp/order/order.html?{params}"
     
@@ -46,10 +43,10 @@ async def get_sklad_menu(user: types.User):
         [InlineKeyboardButton(text="📊 Перевірити Наявність", callback_data="check_stock")]
     ])
 
-async def handle_sklad(message: types.Message):
+async def handle_sklad(message: types.Message, user_data: dict):
     """Обробка розділу складу."""
-    # Передаємо об'єкт користувача для формування URL з параметрами
-    await message.answer("📦 Ви у розділі складу. Оберіть дію:", reply_markup=await get_sklad_menu(message.from_user))
+    menu = await get_sklad_menu(user_data)
+    await message.answer("📦 Ви у розділі складу. Оберіть дію:", reply_markup=menu)
 
 async def get_all_stock():
     """Отримання даних складу."""
