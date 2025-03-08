@@ -13,12 +13,16 @@
     }
     .container {
       padding: 20px;
-      max-width: 100%;
+      max-width: 700px;
       margin: 0 auto;
       text-align: center;
     }
+    #user-info {
+      margin-bottom: 15px;
+      font-size: 16px;
+      font-weight: bold;
+    }
     h1 {
-      text-align: center;
       margin-bottom: 20px;
       font-size: 24px;
     }
@@ -56,7 +60,6 @@
     .course-button:hover {
       background: #ddd;
     }
-    /* Адаптація для маленьких екранів */
     @media (max-width: 500px) {
       .grid-container {
         grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -66,7 +69,6 @@
         max-width: 150px;
       }
     }
-    /* Адаптація для планшетів */
     @media (min-width: 501px) and (max-width: 1024px) {
       .grid-container {
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -79,16 +81,40 @@
 </head>
 <body>
   <div class="container">
+    <!-- Відображення інформації про користувача -->
+    <div id="user-info">Користувач: незнайомий, Телефон: незнайомий</div>
     <h1>🎓 Виберіть курс</h1>
     <div class="grid-container" id="catalog">
       <p>Завантаження...</p>
     </div>
   </div>
   <script>
+    // Функція для отримання параметрів URL
+    function getQueryParams() {
+      const params = {};
+      const queryString = window.location.search.substring(1);
+      const pairs = queryString.split("&");
+      pairs.forEach(pair => {
+        const [key, value] = pair.split("=");
+        if (key) {
+          params[key] = decodeURIComponent(value);
+        }
+      });
+      return params;
+    }
+    
+    function displayUserInfo() {
+      const params = getQueryParams();
+      // Припускаємо, що дані передаються як name та phone
+      const name = params.name || "незнайомий";
+      const phone = params.phone || "незнайомий";
+      const userInfoDiv = document.getElementById("user-info");
+      userInfoDiv.textContent = `Користувач: ${name}, Телефон: ${phone}`;
+    }
+    
     async function loadConfig() {
       try {
         const response = await fetch("../../config.js");
-        if (!response.ok) throw new Error("Не вдалося завантажити config.js");
         const script = document.createElement("script");
         script.src = "../../config.js";
         document.head.appendChild(script);
@@ -118,7 +144,7 @@
           const courseShort = row[1];
           const imagePath = `../../webapp/img/courses/${courseShort}.jpg`;
           const link = document.createElement("a");
-          link.href = `../../webapp/order/products.html?course=${courseShort}`;
+          link.href = `../../webapp/order/products.html?course=${courseShort}&name=${encodeURIComponent(getQueryParams().name || "")}&phone=${encodeURIComponent(getQueryParams().phone || "")}`;
           link.className = "course-button";
           const img = new Image();
           img.src = imagePath;
@@ -126,7 +152,6 @@
             link.innerHTML = `<img src="${imagePath}" alt="${courseName}" loading="lazy">`;
           };
           img.onerror = () => {
-            // Додаємо емоджі, якщо зображення не завантажилося
             link.innerHTML = `${courseName} 📚`;
           };
           catalogDiv.appendChild(link);
@@ -136,6 +161,7 @@
       }
     }
     
+    displayUserInfo();
     loadConfig();
   </script>
   <script src="../../config.js"></script>
