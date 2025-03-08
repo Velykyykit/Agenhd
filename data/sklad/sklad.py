@@ -7,12 +7,13 @@ from datetime import datetime
 import pytz
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, CallbackQuery
 from menu.keyboards import get_restart_keyboard
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from aiogram.types import WebAppInfo
 
 # Налаштування часової зони для Києва
 kyiv_tz = pytz.timezone("Europe/Kiev")
 
-CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
+# Завантаження облікових даних із JSON-рядка
+CREDENTIALS_JSON = json.loads(os.getenv("CREDENTIALS_FILE"))
 FONT_PATH = os.path.join("/app/config/fonts", "DejaVuSans.ttf")
 
 async def get_sklad_menu():
@@ -33,7 +34,7 @@ async def handle_sklad(message):
 
 async def get_all_stock():
     """Отримання даних складу."""
-    gc = gspread.service_account(filename=CREDENTIALS_PATH)
+    gc = gspread.service_account_from_dict(CREDENTIALS_JSON)
     sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
     worksheet = sh.worksheet("SKLAD")
     data = await asyncio.to_thread(worksheet.get_all_values)
@@ -83,21 +84,3 @@ async def show_all_stock(call: CallbackQuery):
     except Exception as e:
         await call.message.answer("❌ Помилка при створенні документа!")
         print(f"❌ ПОМИЛКА: {e}")
-
-#async def show_courses_for_order(bot, message):
-#    """Показує список курсів для замовлення."""
-#    gc = gspread.service_account(filename=CREDENTIALS_PATH)
-#    sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
-#    worksheet = sh.worksheet("dictionary")  # Аркуш із курсами
-#
-#    courses = await asyncio.to_thread(worksheet.col_values, 1)  # Отримати всі назви курсів
-#    if not courses:
-#        await message.answer("❌ Немає доступних курсів для замовлення.")
-#        return
-
-    # Ініціалізація клавіатури із вказанням inline_keyboard
-    markup = InlineKeyboardMarkup(inline_keyboard=[])
-    for course in courses:
-        markup.inline_keyboard.append([InlineKeyboardButton(text=course, callback_data=f"course_{course}")])
-
-    await message.answer("📚 Оберіть курс для замовлення:", reply_markup=markup)
