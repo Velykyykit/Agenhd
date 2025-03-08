@@ -20,11 +20,10 @@ from data.sklad.sklad import handle_sklad, show_all_stock
 # Клавіатури
 from menu.keyboards import get_phone_keyboard, get_restart_keyboard
 
-# === aiogram-dialog (Важливо) ===
-# Замість DialogRegistry імпортуємо setup_dialogs і StartMode
+# === aiogram-dialog ===
 from aiogram_dialog import setup_dialogs, StartMode
-from aiogram_dialog import DialogManager  # Для анотації типів
-from data.sklad.order import order_dialog, OrderSG  # Ваш діалог
+from aiogram_dialog import DialogManager
+from data.sklad.order import order_dialog, OrderSG
 
 # Перегляд замовлень («Для мене»)
 from data.For_me.me import show_my_orders
@@ -40,7 +39,10 @@ if not TOKEN or not SHEET_ID or not SHEET_SKLAD or not CREDENTIALS_FILE:
     raise ValueError("❌ Не знайдено змінні середовища!")
 
 # Конвертуємо CREDENTIALS_FILE з JSON-рядка в Python-словник
-CREDENTIALS_JSON = json.loads(CREDENTIALS_FILE)
+try:
+    CREDENTIALS_JSON = json.loads(CREDENTIALS_FILE)
+except json.JSONDecodeError:
+    raise ValueError("❌ Невірний формат JSON у CREDENTIALS_FILE!")
 
 bot = Bot(token=TOKEN)
 storage = MemoryStorage()
@@ -104,31 +106,26 @@ async def handle_contact(message: types.Message):
 
 @router.callback_query(F.data == "sklad")
 async def handle_sklad_call(call: types.CallbackQuery):
-    """Переходить у розділ 'Склад'."""
     await call.answer()
     await handle_sklad(call.message)
 
 @router.callback_query(F.data == "check_stock")
 async def handle_stock_check(call: types.CallbackQuery):
-    """Перевіряє наявність товарів (генерує PDF)."""
     await call.answer()
     await show_all_stock(call)
 
 @router.callback_query(F.data == "tasks")
 async def handle_tasks(call: types.CallbackQuery):
-    """Розділ 'Завдання' (поки в розробці)."""
     await call.answer()
     await call.message.answer("📝 Розділ 'Завдання' ще в розробці.")
 
 @router.callback_query(F.data == "forme")
 async def handle_forme(call: types.CallbackQuery):
-    """Розділ 'Для мене' – перегляд замовлень."""
     await call.answer()
     await show_my_orders(call.message)
 
 @router.message(F.text == "🔄 Почати спочатку")
 async def restart_handler(message: types.Message):
-    """Кнопка 'Почати спочатку' повертає користувача в головне меню."""
     await message.answer("🔄 Починаємо спочатку", reply_markup=ReplyKeyboardRemove())
     await message.answer("📌 Оберіть розділ:", reply_markup=get_main_menu())
     await message.answer(
@@ -136,22 +133,15 @@ async def restart_handler(message: types.Message):
         reply_markup=await get_restart_keyboard()
     )
 
-# Замість DialogRegistry: підключаємо middleware для aiogram-dialog
-# Це додасть dialog_manager у ваші колбек- та message-обробники
 setup_dialogs(dp)
-
-# Підключаємо ваш діалог до Dispatcher (як router):
 dp.include_router(order_dialog)
 
 @router.callback_query(F.data == "order")
 async def start_order_dialog(call: types.CallbackQuery, dialog_manager: DialogManager):
-    """Запуск діалогу для оформлення замовлення."""
     await call.answer()
-    # Запускаємо діалог (OrderSG.select_course)
     await dialog_manager.start(OrderSG.select_course, mode=StartMode.RESET_STACK)
 
 async def main():
-    """Запуск бота в режимі polling."""
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
