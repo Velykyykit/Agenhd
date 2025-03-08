@@ -1,4 +1,5 @@
 import os
+import json
 import gspread
 import time
 from aiogram import types
@@ -7,11 +8,12 @@ from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Button, Row
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 
-# Підключення до Google Sheets
-CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
+# Отримуємо JSON-об'єкт облікових даних без файлу
+CREDENTIALS_JSON = json.loads(os.getenv("CREDENTIALS_FILE"))
 SHEET_SKLAD = os.getenv("SHEET_SKLAD")
 
-gc = gspread.service_account(filename=CREDENTIALS_PATH)
+# Підключення до Google Sheets через JSON
+gc = gspread.service_account_from_dict(CREDENTIALS_JSON)
 sh = gc.open_by_key(SHEET_SKLAD)
 worksheet_courses = sh.worksheet("dictionary")
 worksheet_sklad = sh.worksheet("SKLAD")
