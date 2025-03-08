@@ -42,6 +42,8 @@
       font-size: 18px;
       font-weight: bold;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      text-decoration: none;
+      color: inherit;
     }
     .course-button img {
       width: 100%;
@@ -52,14 +54,6 @@
     .course-button:hover {
       background: #ddd;
     }
-    #products {
-      margin-top: 20px;
-      padding: 15px;
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      text-align: left;
-    }
   </style>
 </head>
 <body>
@@ -68,7 +62,6 @@
     <div class="grid-container" id="catalog">
       <p>Завантаження...</p>
     </div>
-    <div id="products"></div>
   </div>
 
   <script>
@@ -108,62 +101,24 @@
                 const courseShort = row[1]; // Коротка назва
                 const imagePath = `webapp/img/courses/${courseShort}.jpg`;
 
-                const button = document.createElement("button");
-                button.className = "course-button";
-                button.onclick = () => fetchProducts(sheetId, apiKey, courseShort);
+                const link = document.createElement("a");
+                link.href = `products.html?course=${courseShort}`;
+                link.className = "course-button";
 
                 // Перевіряємо, чи є картинка
                 const img = new Image();
                 img.src = imagePath;
                 img.onload = () => { 
-                    button.innerHTML = `<img src="${imagePath}" alt="${courseName}" loading="lazy">`;
+                    link.innerHTML = `<img src="${imagePath}" alt="${courseName}" loading="lazy">`;
                 };
                 img.onerror = () => {
-                    button.innerHTML = courseName; // Якщо картинки нема, показуємо назву курсу
+                    link.innerHTML = courseName; // Якщо картинки нема, показуємо назву курсу
                 };
 
-                catalogDiv.appendChild(button);
+                catalogDiv.appendChild(link);
             });
         } catch (error) {
             console.error("Помилка отримання каталогу:", error);
-        }
-    }
-
-    async function fetchProducts(sheetId, apiKey, courseShort) {
-        const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/SKLAD?key=${apiKey}`;
-        
-        try {
-            const response = await fetch(apiUrl);
-            const data = await response.json();
-            const productsDiv = document.getElementById("products");
-            productsDiv.innerHTML = `<h2>📦 Товари для курсу: ${courseShort}</h2>`;
-
-            if (!data.values || data.values.length === 0) {
-                productsDiv.innerHTML += "<p>Немає товарів для цього курсу.</p>";
-                return;
-            }
-
-            const products = data.values.slice(1).filter(row => row[1] === courseShort);
-            
-            if (products.length === 0) {
-                productsDiv.innerHTML += "<p>Немає товарів для цього курсу.</p>";
-                return;
-            }
-
-            const list = document.createElement("ul");
-            products.forEach(row => {
-                const productId = row[0];   // ID товару
-                const productName = row[2]; // Назва товару (3-й стовпець)
-                const price = row[5];       // Ціна товару (6-й стовпець)
-
-                const item = document.createElement("li");
-                item.innerHTML = `ID: ${productId}, ${productName} – ${price} грн`;
-                list.appendChild(item);
-            });
-
-            productsDiv.appendChild(list);
-        } catch (error) {
-            console.error("Помилка отримання товарів:", error);
         }
     }
 
