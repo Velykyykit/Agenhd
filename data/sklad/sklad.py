@@ -29,7 +29,7 @@ SHEET_ORDER = os.getenv("SHEET_ORDER")
 
 async def get_sklad_menu():
     """Меню для розділу складу."""
-    webapp_url = f"https://velykyykit.github.io/telegram-bot/?sheet_sklad={SHEET_SKLAD}&sheet_order={SHEET_ORDER}"
+    webapp_url = f"hdlviv-production.up.railway.app/?sheet_sklad={SHEET_SKLAD}&sheet_order={SHEET_ORDER}"
 if not SHEET_SKLAD:
     raise ValueError("❌ SHEET_SKLAD не знайдено!")
     return InlineKeyboardMarkup(inline_keyboard=[
