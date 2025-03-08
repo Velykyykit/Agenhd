@@ -50,7 +50,9 @@ dp = Dispatcher(storage=storage)
 router = Router()
 dp.include_router(router)
 
-# Передаємо JSON безпосередньо
+# Глобальний словник для збереження даних користувачів після аутентифікації
+USER_DATA = {}
+
 auth_manager = AuthManager(SHEET_ID, CREDENTIALS_JSON)
 
 def get_main_menu():
@@ -83,6 +85,9 @@ async def handle_contact(message: types.Message):
         user_data = await auth_manager.check_user_in_database(phone_number)
         logging.info(f"[DEBUG] Відповідь від auth.py: {user_data}")
         if user_data:
+            # Зберігаємо дані користувача в глобальному словнику
+            USER_DATA[message.from_user.id] = user_data
+
             await message.answer(
                 f"✅ Вітаю, *{user_data['name']}*! Ви успішно ідентифіковані. 🎉",
                 parse_mode="Markdown",
@@ -100,7 +105,9 @@ async def handle_contact(message: types.Message):
 async def handle_sklad_call(call: types.CallbackQuery):
     """Обробник натискання кнопки '📦 Склад'."""
     await call.answer()
-    await handle_sklad(call.message)
+    # Отримуємо дані користувача з глобального словника; якщо їх немає, використовуємо значення за замовчуванням.
+    user_data = USER_DATA.get(call.from_user.id, {"name": call.from_user.first_name, "phone": "не вказано"})
+    await handle_sklad(call.message, user_data)
 
 @router.callback_query(F.data == "check_stock")
 async def handle_stock_check(call: types.CallbackQuery):
@@ -153,7 +160,6 @@ async def main():
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", 8000)  # Запускаємо сервер на порту 8000
     await site.start()
-
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
