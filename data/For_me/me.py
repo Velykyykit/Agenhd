@@ -1,5 +1,4 @@
 from aiogram import types
-from orders_store import get_orders
 
 async def show_my_orders(message: types.Message):
     """
