@@ -1,26 +1,22 @@
-import os
 import re
 import gspread
 import asyncio
 from oauth2client.service_account import ServiceAccountCredentials
 
 class AuthManager:
-    def __init__(self, sheet_id, credentials_file):
+    def __init__(self, sheet_id, credentials_json):
         self.sheet_id = sheet_id
-        self.credentials_file = credentials_file
+        self.credentials_json = credentials_json
         self.cache = {}
 
         if not self.sheet_id:
             raise ValueError("❌ SHEET_ID не знайдено! Перевірте змінні Railway.")
-        if not self.credentials_file:
-            raise ValueError("❌ CREDENTIALS_FILE не знайдено! Перевірте змінні Railway.")
+        if not self.credentials_json:
+            raise ValueError("❌ CREDENTIALS_JSON не знайдено! Перевірте змінні Railway.")
 
-        CREDENTIALS_PATH = os.path.join("/app", self.credentials_file)
-        if not os.path.exists(CREDENTIALS_PATH):
-            raise FileNotFoundError(f"❌ Файл облікових даних не знайдено: {CREDENTIALS_PATH}")
-
+        # Використовуємо JSON напряму
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        self.creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_PATH, scope)
+        self.creds = ServiceAccountCredentials.from_json_keyfile_dict(self.credentials_json, scope)
         self.client = gspread.authorize(self.creds)
         self.sheet = self.client.open_by_key(self.sheet_id).worksheet("contact")
 
