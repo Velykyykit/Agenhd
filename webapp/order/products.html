@@ -44,17 +44,21 @@
       padding-bottom: 10px;
       border-bottom: 1px solid #ccc;
     }
-    /* Контейнер, що обгортає кнопки і поле введення */
+    /* Контейнер для розміщення назви товару та кнопок в одному рядку */
+    .row-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    /* Контейнер для кнопок і поля введення (фіолетовий дизайн, як приклад) */
     .quantity-container {
       display: inline-flex;
       align-items: center;
       background: linear-gradient(to bottom, #9b59b6, #8e44ad); /* Фіолетовий градієнт */
       border-radius: 20px;
-      padding: 2px 6px; /* Внутрішні відступи, щоб додати «повітря» */
+      padding: 2px 6px;
       box-shadow: inset 0 0 1px #fff, 0 2px 3px rgba(0,0,0,0.2);
-      margin-top: 5px;
     }
-    /* Кнопки «–» та «+» */
     .quantity-container button {
       background: transparent;
       border: none;
@@ -72,7 +76,6 @@
       background-color: rgba(255,255,255,0.2);
       transform: scale(1.1);
     }
-    /* Поле введення кількості */
     .quantity-container input {
       width: 40px;
       text-align: center;
@@ -84,7 +87,7 @@
       color: #000;
     }
     .quantity-container input:focus {
-      outline: 2px solid #ddd; /* Виділення при фокусі */
+      outline: 2px solid #ddd;
     }
   </style>
 </head>
@@ -133,18 +136,24 @@
           productsDiv.innerHTML += "<p>Немає товарів для цього курсу.</p>";
           return;
         }
+        
         const list = document.createElement("ul");
         products.forEach(row => {
           // Припустимо: row[2] - назва товару, row[5] - ціна
           const li = document.createElement("li");
+          
+          // Створюємо контейнер для розміщення тексту та кнопок
+          const rowContainer = document.createElement("div");
+          rowContainer.className = "row-container";
+          
+          // Інформація про товар (зліва)
           const productInfo = document.createElement("div");
           productInfo.innerHTML = `<strong>${row[2]}</strong> – ${row[5]} грн`;
           
-          // Контейнер для кнопок і поля введення
+          // Контейнер для кнопок і поля введення (справа)
           const qtyContainer = document.createElement("div");
           qtyContainer.className = "quantity-container";
           
-          // Створюємо кнопки та інпут
           const minusButton = document.createElement("button");
           minusButton.textContent = "–";
           
@@ -163,7 +172,6 @@
               quantityInput.value = current - 1;
             }
           });
-          
           // Логіка збільшення
           plusButton.addEventListener("click", () => {
             let current = parseInt(quantityInput.value) || 0;
@@ -174,10 +182,14 @@
           qtyContainer.appendChild(quantityInput);
           qtyContainer.appendChild(plusButton);
           
-          li.appendChild(productInfo);
-          li.appendChild(qtyContainer);
+          // Додаємо все до rowContainer
+          rowContainer.appendChild(productInfo);
+          rowContainer.appendChild(qtyContainer);
+          
+          li.appendChild(rowContainer);
           list.appendChild(li);
         });
+        
         productsDiv.appendChild(list);
       } catch (error) {
         console.error("Помилка отримання товарів:", error);
