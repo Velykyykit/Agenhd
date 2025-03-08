@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import json
 
 from aiogram import Bot, Dispatcher, types, Router, F
 from aiogram.types import (
@@ -38,13 +39,16 @@ CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
 if not TOKEN or not SHEET_ID or not SHEET_SKLAD or not CREDENTIALS_FILE:
     raise ValueError("❌ Не знайдено змінні середовища!")
 
+# Конвертуємо CREDENTIALS_FILE з JSON-рядка в Python-словник
+CREDENTIALS_JSON = json.loads(CREDENTIALS_FILE)
+
 bot = Bot(token=TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 router = Router()
 dp.include_router(router)
 
-auth_manager = AuthManager(SHEET_ID, CREDENTIALS_FILE)
+auth_manager = AuthManager(SHEET_ID, CREDENTIALS_JSON)
 
 def get_main_menu():
     """Головне меню із кнопками."""
