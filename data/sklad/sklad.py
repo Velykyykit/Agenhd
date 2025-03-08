@@ -29,7 +29,6 @@ async def get_sklad_menu(user_data: dict):
     Формує меню для розділу складу.
     URL WebApp отримує query-параметри з ім'ям та телефоном користувача.
     """
-    # Використовуємо дані з user_data (словника)
     user_name = user_data.get("name", "незнайомий")
     user_phone = user_data.get("phone", "не вказано")
     params = urlencode({"name": user_name, "phone": user_phone})
