@@ -14,10 +14,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout репозиторій
+      - name: 📥 Checkout репозиторій
         uses: actions/checkout@v3
 
-      - name: Створення `config.js` зі змінними
+      - name: 🛠️ Створення `config.js` зі змінними
         run: |
           echo "window.CONFIG = {" > config.js
           echo "  SHEET_SKLAD: '${{ secrets.SHEET_SKLAD }}'," >> config.js
@@ -25,19 +25,21 @@ jobs:
           echo "  GOOGLE_API_KEY: '${{ secrets.GOOGLE_API_KEY }}'" >> config.js
           echo "};" >> config.js
 
-      - name: Commit `config.js`
+      - name: 🔍 Перевірка файлу `config.js`
+        run: cat config.js
+
+      - name: 📤 Commit `config.js`
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git add config.js
-          git commit -m "Added config.js from GitHub Secrets"
+          git diff --quiet || git commit -m "🔧 Додано config.js з Secrets"
           git push origin main
 
-      - name: Перевірка файлу `config.js`
-        run: cat config.js
-
-      - name: Деплой у GitHub Pages
+      - name: 🚀 Деплой у GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
           folder: .
+          clean: true
+          clean-exclude: "config.js"
