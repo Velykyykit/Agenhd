@@ -89,7 +89,7 @@
     </div>
   </div>
   <script>
-    // Функція для отримання параметрів URL
+    // Функція для отримання параметрів URL з додатковою заміною "+" на пробіли
     function getQueryParams() {
       const params = {};
       const queryString = window.location.search.substring(1);
@@ -97,7 +97,9 @@
       pairs.forEach(pair => {
         const [key, value] = pair.split("=");
         if (key) {
-          params[key] = decodeURIComponent(value);
+          // 1) decodeURIComponent - декодує %XX
+          // 2) .replace(/\+/g, " ") - замінює "+" на пробіли
+          params[key] = decodeURIComponent(value || "").replace(/\+/g, " ");
         }
       });
       return params;
@@ -139,13 +141,21 @@
           catalogDiv.innerHTML = "<p>Немає даних у таблиці</p>";
           return;
         }
+        // Зчитуємо name та phone, щоб передавати далі у products.html
+        const params = getQueryParams();
+        const userName = params.name || "";
+        const userPhone = params.phone || "";
+
         data.values.slice(1).forEach(row => {
           const courseName = row[0];
           const courseShort = row[1];
           const imagePath = `../../webapp/img/courses/${courseShort}.jpg`;
           const link = document.createElement("a");
-          link.href = `../../webapp/order/products.html?course=${courseShort}&name=${encodeURIComponent(getQueryParams().name || "")}&phone=${encodeURIComponent(getQueryParams().phone || "")}`;
+          
+          // Передаємо ім'я та телефон як параметри products.html
+          link.href = `../../webapp/order/products.html?course=${encodeURIComponent(courseShort)}&name=${encodeURIComponent(userName)}&phone=${encodeURIComponent(userPhone)}`;
           link.className = "course-button";
+          
           const img = new Image();
           img.src = imagePath;
           img.onload = () => {
@@ -161,7 +171,9 @@
       }
     }
     
+    // Спочатку відображаємо інформацію про користувача
     displayUserInfo();
+    // Потім завантажуємо конфіг і список курсів
     loadConfig();
   </script>
   <script src="../../config.js"></script>
