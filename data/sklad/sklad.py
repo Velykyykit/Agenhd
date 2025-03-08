@@ -13,7 +13,16 @@ from aiogram.types import WebAppInfo
 kyiv_tz = pytz.timezone("Europe/Kiev")
 
 # Завантаження облікових даних із JSON-рядка
-CREDENTIALS_JSON = json.loads(os.getenv("CREDENTIALS_FILE"))
+CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
+
+if not CREDENTIALS_FILE:
+    raise ValueError("❌ Змінна CREDENTIALS_FILE не знайдена!")
+
+try:
+    CREDENTIALS_JSON = json.loads(CREDENTIALS_FILE)
+except json.JSONDecodeError as e:
+    raise ValueError(f"❌ Помилка розбору JSON в CREDENTIALS_FILE: {e}")
+
 FONT_PATH = os.path.join("/app/config/fonts", "DejaVuSans.ttf")
 
 async def get_sklad_menu():
