@@ -3,10 +3,14 @@ import logging
 import os
 
 from aiogram import Bot, Dispatcher, types, Router, F
-from aiogram.types import ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import (
+    ReplyKeyboardRemove, 
+    InlineKeyboardMarkup, 
+    InlineKeyboardButton
+)
 from aiogram.fsm.storage.memory import MemoryStorage
 
-# Аутентифікація
+# Аутентифікація (ваш модуль)
 from config.auth import AuthManager
 
 # Логіка складу
@@ -15,17 +19,17 @@ from data.sklad.sklad import handle_sklad, show_all_stock
 # Клавіатури
 from menu.keyboards import get_phone_keyboard, get_restart_keyboard
 
-# aiogram-dialog
-from aiogram_dialog import setup_dialogs, StartMode, DialogManager
-from data.sklad.order import order_dialog, OrderSG
+# === aiogram-dialog (Важливо) ===
+# Замість DialogRegistry імпортуємо setup_dialogs і StartMode
+from aiogram_dialog import setup_dialogs, StartMode
+from aiogram_dialog import DialogManager  # Для анотації типів
+from data.sklad.order import order_dialog, OrderSG  # Ваш діалог
 
 # Перегляд замовлень («Для мене»)
 from data.For_me.me import show_my_orders
 
-# Логування
 logging.basicConfig(level=logging.INFO)
 
-# Отримання змінних середовища
 TOKEN = os.getenv("TOKEN")
 SHEET_ID = os.getenv("SHEET_ID")
 SHEET_SKLAD = os.getenv("SHEET_SKLAD")
@@ -34,7 +38,6 @@ CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
 if not TOKEN or not SHEET_ID or not SHEET_SKLAD or not CREDENTIALS_FILE:
     raise ValueError("❌ Не знайдено змінні середовища!")
 
-# Створення бота та диспетчера
 bot = Bot(token=TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
@@ -61,10 +64,14 @@ async def send_welcome(message: types.Message):
 
 @router.message(F.contact)
 async def handle_contact(message: types.Message):
-    """Обробка аутентифікації користувача."""
+    """
+    Обробляє отриманий контакт і виконує аутентифікацію.
+    Перевіряє, чи контакт дійсно належить відправнику (contact.user_id).
+    """
     if message.contact.user_id != message.from_user.id:
         await message.answer(
-            "❌ Скористайтеся кнопкою '📲 Поділитися номером' для відправки саме вашого номера телефону."
+            "❌ Скористайтеся кнопкою '📲 Поділитися номером' "
+            "для відправки саме вашого номера телефону."
         )
         return
 
@@ -99,13 +106,13 @@ async def handle_sklad_call(call: types.CallbackQuery):
 
 @router.callback_query(F.data == "check_stock")
 async def handle_stock_check(call: types.CallbackQuery):
-    """Перевіряє наявність товарів."""
+    """Перевіряє наявність товарів (генерує PDF)."""
     await call.answer()
     await show_all_stock(call)
 
 @router.callback_query(F.data == "tasks")
 async def handle_tasks(call: types.CallbackQuery):
-    """Розділ 'Завдання'."""
+    """Розділ 'Завдання' (поки в розробці)."""
     await call.answer()
     await call.message.answer("📝 Розділ 'Завдання' ще в розробці.")
 
@@ -125,16 +132,18 @@ async def restart_handler(message: types.Message):
         reply_markup=await get_restart_keyboard()
     )
 
-# Підключаємо middleware для aiogram-dialog
+# Замість DialogRegistry: підключаємо middleware для aiogram-dialog
+# Це додасть dialog_manager у ваші колбек- та message-обробники
 setup_dialogs(dp)
 
-# Підключаємо діалог для оформлення замовлення
+# Підключаємо ваш діалог до Dispatcher (як router):
 dp.include_router(order_dialog)
 
 @router.callback_query(F.data == "order")
 async def start_order_dialog(call: types.CallbackQuery, dialog_manager: DialogManager):
     """Запуск діалогу для оформлення замовлення."""
     await call.answer()
+    # Запускаємо діалог (OrderSG.select_course)
     await dialog_manager.start(OrderSG.select_course, mode=StartMode.RESET_STACK)
 
 async def main():
