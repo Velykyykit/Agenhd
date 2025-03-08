@@ -44,37 +44,47 @@
       padding-bottom: 10px;
       border-bottom: 1px solid #ccc;
     }
-    .quantity-controls {
-      margin-top: 5px;
-    }
-    /* Стилі для кнопок плюс і мінус */
-    .quantity-controls button {
-      width: 40px;
-      height: 40px;
-      background-color: #007bff;
-      color: #fff;
-      border: none;
-      border-radius: 50%;
-      font-size: 20px;
+    /* Контейнер, що обгортає кнопки і поле введення */
+    .quantity-container {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      margin: 0 5px;
-      cursor: pointer;
-      transition: background-color 0.3s ease, transform 0.2s ease;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      background: linear-gradient(to bottom, #9b59b6, #8e44ad); /* Фіолетовий градієнт */
+      border-radius: 20px;
+      padding: 2px 6px; /* Внутрішні відступи, щоб додати «повітря» */
+      box-shadow: inset 0 0 1px #fff, 0 2px 3px rgba(0,0,0,0.2);
+      margin-top: 5px;
     }
-    .quantity-controls button:hover {
-      background-color: #0056b3;
+    /* Кнопки «–» та «+» */
+    .quantity-container button {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 18px;
+      width: 30px;
+      height: 30px;
+      line-height: 30px;
+      text-align: center;
+      cursor: pointer;
+      border-radius: 50%;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    .quantity-container button:hover {
+      background-color: rgba(255,255,255,0.2);
       transform: scale(1.1);
     }
-    .quantity-controls input {
-      width: 60px;
-      height: 40px;
+    /* Поле введення кількості */
+    .quantity-container input {
+      width: 40px;
       text-align: center;
-      font-size: 18px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      margin: 0 5px;
+      background: #fff;
+      color: #000;
+    }
+    .quantity-container input:focus {
+      outline: 2px solid #ddd; /* Виділення при фокусі */
     }
   </style>
 </head>
@@ -125,13 +135,16 @@
         }
         const list = document.createElement("ul");
         products.forEach(row => {
+          // Припустимо: row[2] - назва товару, row[5] - ціна
           const li = document.createElement("li");
           const productInfo = document.createElement("div");
           productInfo.innerHTML = `<strong>${row[2]}</strong> – ${row[5]} грн`;
           
+          // Контейнер для кнопок і поля введення
           const qtyContainer = document.createElement("div");
-          qtyContainer.className = "quantity-controls";
+          qtyContainer.className = "quantity-container";
           
+          // Створюємо кнопки та інпут
           const minusButton = document.createElement("button");
           minusButton.textContent = "–";
           
@@ -143,12 +156,15 @@
           const plusButton = document.createElement("button");
           plusButton.textContent = "+";
           
+          // Логіка зменшення
           minusButton.addEventListener("click", () => {
             let current = parseInt(quantityInput.value) || 0;
             if (current > 0) {
               quantityInput.value = current - 1;
             }
           });
+          
+          // Логіка збільшення
           plusButton.addEventListener("click", () => {
             let current = parseInt(quantityInput.value) || 0;
             quantityInput.value = current + 1;
