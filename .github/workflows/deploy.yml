@@ -25,8 +25,12 @@ jobs:
           echo "  GOOGLE_API_KEY: '${{ secrets.GOOGLE_API_KEY }}'" >> config.js
           echo "};" >> config.js
 
+      - name: Перевірка файлу `config.js`
+        run: cat config.js
+
       - name: Деплой у GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
           folder: .
+          clean: true  # Очищає старі файли перед деплоєм
