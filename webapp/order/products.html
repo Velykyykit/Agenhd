@@ -1,1 +1,108 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>🛒 Товари</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: #ffffff; /* Фон змінено на білий */
+      color: #000;
+    }
+    .container {
+      padding: 20px;
+      max-width: 700px;
+      margin: 0 auto;
+      text-align: left;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+    .back-link {
+      text-decoration: none;
+      color: #007bff;
+      font-size: 18px;
+      display: block;
+      margin-bottom: 15px;
+    }
+    .product-list {
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="../../index.html" class="back-link">🔙 Назад до курсів</a>
+    <h1>🛒 Товари</h1>
+    <div id="products" class="product-list">Завантаження...</div>
+  </div>
 
+  <script>
+    async function loadConfig() {
+        try {
+            const response = await fetch("../../config.js");
+            const script = document.createElement("script");
+            script.src = "../../config.js";
+            document.head.appendChild(script);
+            await new Promise(resolve => script.onload = resolve);
+            
+            const SHEET_SKLAD = window.CONFIG.SHEET_SKLAD;
+            const GOOGLE_API_KEY = window.CONFIG.GOOGLE_API_KEY;
+            
+            fetchProducts(SHEET_SKLAD, GOOGLE_API_KEY);
+        } catch (error) {
+            console.error("Помилка завантаження конфігурації:", error);
+        }
+    }
+
+    async function fetchProducts(sheetId, apiKey) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const courseShort = urlParams.get("course");
+        if (!courseShort) {
+            document.getElementById("products").innerHTML = "<p>❌ Курс не вказано.</p>";
+            return;
+        }
+
+        const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/SKLAD?key=${apiKey}`;
+        
+        try {
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            const productsDiv = document.getElementById("products");
+            productsDiv.innerHTML = `<h2>📦 Товари для курсу: ${courseShort}</h2>`;
+
+            if (!data.values || data.values.length === 0) {
+                productsDiv.innerHTML += "<p>Немає товарів для цього курсу.</p>";
+                return;
+            }
+
+            const products = data.values.slice(1).filter(row => row[1] === courseShort);
+            
+            if (products.length === 0) {
+                productsDiv.innerHTML += "<p>Немає товарів для цього курсу.</p>";
+                return;
+            }
+
+            const list = document.createElement("ul");
+            products.forEach(row => {
+                list.innerHTML += `<li><strong>${row[2]}</strong> – ${row[5]} грн</li>`;
+            });
+
+            productsDiv.appendChild(list);
+        } catch (error) {
+            console.error("Помилка отримання товарів:", error);
+        }
+    }
+
+    loadConfig();
+  </script>
+  <script src="../../config.js"></script>
+</body>
+</html>
