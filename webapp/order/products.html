@@ -8,7 +8,7 @@
     body {
       margin: 0;
       font-family: sans-serif;
-      background-color: #ffffff; /* Фон змінено на білий */
+      background-color: #ffffff;
       color: #000;
     }
     .container {
@@ -35,11 +35,52 @@
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
+    ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    li {
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #ccc;
+    }
+    .quantity-controls {
+      margin-top: 5px;
+    }
+    /* Стилі для кнопок плюс і мінус */
+    .quantity-controls button {
+      width: 40px;
+      height: 40px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      font-size: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    .quantity-controls button:hover {
+      background-color: #0056b3;
+      transform: scale(1.1);
+    }
+    .quantity-controls input {
+      width: 60px;
+      height: 40px;
+      text-align: center;
+      font-size: 18px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- Змінено посилання: тепер повертає на order.html -->
+    <!-- Посилання повертає на order.html -->
     <a href="order.html" class="back-link">🔙 Назад до курсів</a>
     <h1>Товари</h1>
     <div id="products" class="product-list">Завантаження...</div>
@@ -84,7 +125,42 @@
         }
         const list = document.createElement("ul");
         products.forEach(row => {
-          list.innerHTML += `<li><strong>${row[2]}</strong> – ${row[5]} грн</li>`;
+          const li = document.createElement("li");
+          const productInfo = document.createElement("div");
+          productInfo.innerHTML = `<strong>${row[2]}</strong> – ${row[5]} грн`;
+          
+          const qtyContainer = document.createElement("div");
+          qtyContainer.className = "quantity-controls";
+          
+          const minusButton = document.createElement("button");
+          minusButton.textContent = "–";
+          
+          const quantityInput = document.createElement("input");
+          quantityInput.type = "number";
+          quantityInput.value = "0";
+          quantityInput.min = "0";
+          
+          const plusButton = document.createElement("button");
+          plusButton.textContent = "+";
+          
+          minusButton.addEventListener("click", () => {
+            let current = parseInt(quantityInput.value) || 0;
+            if (current > 0) {
+              quantityInput.value = current - 1;
+            }
+          });
+          plusButton.addEventListener("click", () => {
+            let current = parseInt(quantityInput.value) || 0;
+            quantityInput.value = current + 1;
+          });
+          
+          qtyContainer.appendChild(minusButton);
+          qtyContainer.appendChild(quantityInput);
+          qtyContainer.appendChild(plusButton);
+          
+          li.appendChild(productInfo);
+          li.appendChild(qtyContainer);
+          list.appendChild(li);
         });
         productsDiv.appendChild(list);
       } catch (error) {
