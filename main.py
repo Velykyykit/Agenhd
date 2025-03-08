@@ -128,7 +128,6 @@ async def restart_handler(message: types.Message):
 
 # Підключаємо aiogram-dialog
 setup_dialogs(dp)
-dp.include_router(order_dialog)
 
 @router.callback_query(F.data == "order")
 async def start_order_dialog(call: types.CallbackQuery, dialog_manager: DialogManager):
