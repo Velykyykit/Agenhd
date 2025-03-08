@@ -2,47 +2,52 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
-  <title>Каталог курсів</title>
+  <title>📚 Виберіть курс</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
       margin: 0;
       font-family: sans-serif;
-      background-color: #f7f7f7;
+      background-color: #f0f0f0;
       color: #000;
     }
     .container {
       padding: 20px;
-      max-width: 600px;
+      max-width: 700px;
       margin: 0 auto;
+      text-align: center;
     }
     h1 {
       text-align: center;
       margin-bottom: 20px;
+      font-size: 24px;
     }
     .grid-container {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 10px;
+      justify-content: center;
     }
     .course-button {
+      width: 300px;
+      height: 300px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: none;
+      background: #ffffff;
       border: 1px solid #ccc;
-      padding: 10px;
       cursor: pointer;
-      width: 100%;
       text-align: center;
       border-radius: 8px;
-      font-size: 16px;
+      font-size: 18px;
       font-weight: bold;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     .course-button img {
       width: 100%;
+      height: 100%;
+      object-fit: cover;
       border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     .course-button:hover {
       background: #ddd;
@@ -53,26 +58,17 @@
       background: #fff;
       border-radius: 8px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    #debug {
-      background: #eee;
-      padding: 10px;
-      margin-top: 20px;
-      border-radius: 5px;
+      text-align: left;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Каталог курсів</h1>
+    <h1>📚 Виберіть курс</h1>
     <div class="grid-container" id="catalog">
       <p>Завантаження...</p>
     </div>
     <div id="products"></div>
-    <div id="debug">
-      <h2>Debug Info:</h2>
-      <pre id="debug-info"></pre>
-    </div>
   </div>
 
   <script>
@@ -87,9 +83,6 @@
             const SHEET_SKLAD = window.CONFIG.SHEET_SKLAD;
             const GOOGLE_API_KEY = window.CONFIG.GOOGLE_API_KEY;
             
-            console.log("SHEET_SKLAD:", SHEET_SKLAD);
-            document.getElementById("debug-info").textContent += `SHEET_SKLAD: ${SHEET_SKLAD}\n`;
-
             fetchCourses(SHEET_SKLAD, GOOGLE_API_KEY);
         } catch (error) {
             console.error("Помилка завантаження конфігурації:", error);
@@ -102,8 +95,6 @@
         try {
             const response = await fetch(apiUrl);
             const data = await response.json();
-            console.log("Отримані дані:", data);
-
             const catalogDiv = document.getElementById("catalog");
             catalogDiv.innerHTML = "";
             
@@ -114,7 +105,7 @@
 
             data.values.slice(1).forEach(row => {
                 const courseName = row[0];  // Повна назва курсу
-                const courseShort = row[1]; // Коротка назва (для пошуку)
+                const courseShort = row[1]; // Коротка назва
                 const imagePath = `webapp/img/courses/${courseShort}.jpg`;
 
                 const button = document.createElement("button");
@@ -128,7 +119,7 @@
                     button.innerHTML = `<img src="${imagePath}" alt="${courseName}" loading="lazy">`;
                 };
                 img.onerror = () => {
-                    button.innerHTML = courseName; // Якщо картинки нема, показуємо назву
+                    button.innerHTML = courseName; // Якщо картинки нема, показуємо назву курсу
                 };
 
                 catalogDiv.appendChild(button);
@@ -144,10 +135,8 @@
         try {
             const response = await fetch(apiUrl);
             const data = await response.json();
-            console.log("Отримані товари:", data);
-
             const productsDiv = document.getElementById("products");
-            productsDiv.innerHTML = `<h2>Товари для курсу: ${courseShort}</h2>`;
+            productsDiv.innerHTML = `<h2>📦 Товари для курсу: ${courseShort}</h2>`;
 
             if (!data.values || data.values.length === 0) {
                 productsDiv.innerHTML += "<p>Немає товарів для цього курсу.</p>";
