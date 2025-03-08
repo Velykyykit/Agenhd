@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
-  <title>Каталог товарів</title>
+  <title>Каталог курсів</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
@@ -37,7 +37,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>Каталог товарів</h1>
+    <h1>Каталог курсів</h1>
     <div id="catalog">
       <p>Завантаження...</p>
     </div>
@@ -47,15 +47,13 @@
     // Отримуємо параметри з URL
     const urlParams = new URLSearchParams(window.location.search);
     const SHEET_SKLAD = urlParams.get("sheet_sklad");
-    const SHEET_ORDER = urlParams.get("sheet_order");
 
     console.log("Отримано SHEET_SKLAD:", SHEET_SKLAD);
-    console.log("Отримано SHEET_ORDER:", SHEET_ORDER);
 
     if (!SHEET_SKLAD) {
       document.getElementById("catalog").innerHTML = "<p>Помилка: Не передано параметр sheet_sklad</p>";
     } else {
-      const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_SKLAD}/values/SKLAD?key=ВАШ_GOOGLE_API_KEY`;
+      const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_SKLAD}/values/dictionary?key=ВАШ_GOOGLE_API_KEY`;
 
       async function fetchCatalog() {
         try {
@@ -73,10 +71,8 @@
             const itemDiv = document.createElement("div");
             itemDiv.className = "catalog-item";
             itemDiv.innerHTML = `
-              <h2>${row[2]}</h2>
-              <p><strong>Курс:</strong> ${row[1]}</p>
-              <p><strong>Наявність:</strong> ${row[3]}</p>
-              <p><strong>Ціна:</strong> ${row[5]} грн</p>
+              <h2>${row[0]}</h2>
+              <p><strong>Коротка назва:</strong> ${row[1]}</p>
             `;
             catalogDiv.appendChild(itemDiv);
           });
