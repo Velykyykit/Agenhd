@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
-  <title>🛒 Товари</title>
+  <title>Товари</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
@@ -39,68 +39,59 @@
 </head>
 <body>
   <div class="container">
-    <a href="../../index.html" class="back-link">🔙 Назад до курсів</a>
-    <h1>🛒 Товари</h1>
+    <!-- Змінено посилання: тепер повертає на order.html -->
+    <a href="order.html" class="back-link">🔙 Назад до курсів</a>
+    <h1>Товари</h1>
     <div id="products" class="product-list">Завантаження...</div>
   </div>
-
   <script>
     async function loadConfig() {
-        try {
-            const response = await fetch("../../config.js");
-            const script = document.createElement("script");
-            script.src = "../../config.js";
-            document.head.appendChild(script);
-            await new Promise(resolve => script.onload = resolve);
-            
-            const SHEET_SKLAD = window.CONFIG.SHEET_SKLAD;
-            const GOOGLE_API_KEY = window.CONFIG.GOOGLE_API_KEY;
-            
-            fetchProducts(SHEET_SKLAD, GOOGLE_API_KEY);
-        } catch (error) {
-            console.error("Помилка завантаження конфігурації:", error);
-        }
+      try {
+        const response = await fetch("../../config.js");
+        const script = document.createElement("script");
+        script.src = "../../config.js";
+        document.head.appendChild(script);
+        await new Promise(resolve => script.onload = resolve);
+        const SHEET_SKLAD = window.CONFIG.SHEET_SKLAD;
+        const GOOGLE_API_KEY = window.CONFIG.GOOGLE_API_KEY;
+        fetchProducts(SHEET_SKLAD, GOOGLE_API_KEY);
+      } catch (error) {
+        console.error("Помилка завантаження конфігурації:", error);
+      }
     }
-
+    
     async function fetchProducts(sheetId, apiKey) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const courseShort = urlParams.get("course");
-        if (!courseShort) {
-            document.getElementById("products").innerHTML = "<p>❌ Курс не вказано.</p>";
-            return;
+      const urlParams = new URLSearchParams(window.location.search);
+      const courseShort = urlParams.get("course");
+      if (!courseShort) {
+        document.getElementById("products").innerHTML = "<p>❌ Курс не вказано.</p>";
+        return;
+      }
+      const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/SKLAD?key=${apiKey}`;
+      try {
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+        const productsDiv = document.getElementById("products");
+        productsDiv.innerHTML = `<h2>Товари для курсу: ${courseShort}</h2>`;
+        if (!data.values || data.values.length === 0) {
+          productsDiv.innerHTML += "<p>Немає товарів для цього курсу.</p>";
+          return;
         }
-
-        const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/SKLAD?key=${apiKey}`;
-        
-        try {
-            const response = await fetch(apiUrl);
-            const data = await response.json();
-            const productsDiv = document.getElementById("products");
-            productsDiv.innerHTML = `<h2>📦 Товари для курсу: ${courseShort}</h2>`;
-
-            if (!data.values || data.values.length === 0) {
-                productsDiv.innerHTML += "<p>Немає товарів для цього курсу.</p>";
-                return;
-            }
-
-            const products = data.values.slice(1).filter(row => row[1] === courseShort);
-            
-            if (products.length === 0) {
-                productsDiv.innerHTML += "<p>Немає товарів для цього курсу.</p>";
-                return;
-            }
-
-            const list = document.createElement("ul");
-            products.forEach(row => {
-                list.innerHTML += `<li><strong>${row[2]}</strong> – ${row[5]} грн</li>`;
-            });
-
-            productsDiv.appendChild(list);
-        } catch (error) {
-            console.error("Помилка отримання товарів:", error);
+        const products = data.values.slice(1).filter(row => row[1] === courseShort);
+        if (products.length === 0) {
+          productsDiv.innerHTML += "<p>Немає товарів для цього курсу.</p>";
+          return;
         }
+        const list = document.createElement("ul");
+        products.forEach(row => {
+          list.innerHTML += `<li><strong>${row[2]}</strong> – ${row[5]} грн</li>`;
+        });
+        productsDiv.appendChild(list);
+      } catch (error) {
+        console.error("Помилка отримання товарів:", error);
+      }
     }
-
+    
     loadConfig();
   </script>
   <script src="../../config.js"></script>
