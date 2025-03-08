@@ -5,7 +5,7 @@ import asyncio
 from fpdf import FPDF
 from datetime import datetime
 import pytz
-from aiogram import types  # ✅ Додано імпорт types
+from aiogram import types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, CallbackQuery, WebAppInfo
 from menu.keyboards import get_restart_keyboard
 
@@ -24,13 +24,16 @@ except json.JSONDecodeError as e:
     raise ValueError(f"❌ Помилка розбору JSON в CREDENTIALS_FILE: {e}")
 
 FONT_PATH = os.path.join("/app/config/fonts", "DejaVuSans.ttf")
+SHEET_SKLAD = os.getenv("SHEET_SKLAD")
+SHEET_ORDER = os.getenv("SHEET_ORDER")
 
 async def get_sklad_menu():
     """Меню для розділу складу."""
+    webapp_url = f"https://velykyykit.github.io/telegram-bot/?sheet_sklad={SHEET_SKLAD}&sheet_order={SHEET_ORDER}"
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text="🛒 Зробити Замовлення",
-            web_app=WebAppInfo(url="https://velykyykit.github.io/telegram-bot/")
+            web_app=WebAppInfo(url=webapp_url)
         )],
         [InlineKeyboardButton(text="📊 Перевірити Наявність", callback_data="check_stock")]
     ])
@@ -42,7 +45,7 @@ async def handle_sklad(message: types.Message):
 async def get_all_stock():
     """Отримання даних складу."""
     gc = gspread.service_account_from_dict(CREDENTIALS_JSON)
-    sh = gc.open_by_key(os.getenv("SHEET_SKLAD"))
+    sh = gc.open_by_key(SHEET_SKLAD)
     worksheet = sh.worksheet("SKLAD")
     data = await asyncio.to_thread(worksheet.get_all_values)
     stock_items = [{
