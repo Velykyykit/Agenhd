@@ -50,7 +50,7 @@
       justify-content: space-between;
       align-items: center;
     }
-    /* Контейнер для кнопок і поля введення (фіолетовий дизайн, як приклад) */
+    /* Контейнер для кнопок і поля введення (фіолетовий дизайн) */
     .quantity-container {
       display: inline-flex;
       align-items: center;
@@ -89,6 +89,24 @@
     .quantity-container input:focus {
       outline: 2px solid #ddd;
     }
+    /* Кнопка "Додати в кошик" (у такому ж стилі) */
+    .add-to-cart {
+      display: block;
+      margin: 20px auto 0; /* центруємо, відступ зверху */
+      padding: 10px 20px;
+      background: linear-gradient(to bottom, #9b59b6, #8e44ad);
+      border-radius: 20px;
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    .add-to-cart:hover {
+      background-color: rgba(255,255,255,0.2);
+      transform: scale(1.05);
+    }
   </style>
 </head>
 <body>
@@ -121,28 +139,51 @@
         document.getElementById("products").innerHTML = "<p>❌ Курс не вказано.</p>";
         return;
       }
-      const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/SKLAD?key=${apiKey}`;
+      
       try {
-        const response = await fetch(apiUrl);
-        const data = await response.json();
-        const productsDiv = document.getElementById("products");
-        productsDiv.innerHTML = `<h2>Товари для курсу: ${courseShort}</h2>`;
-        if (!data.values || data.values.length === 0) {
-          productsDiv.innerHTML += "<p>Немає товарів для цього курсу.</p>";
+        // Завантажуємо всю таблицю "dictionary" (де зберігаються назви курсів)
+        const dictUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/dictionary?key=${apiKey}`;
+        const dictResp = await fetch(dictUrl);
+        const dictData = await dictResp.json();
+        
+        // Шукаємо рядок із відповідною короткою назвою (row[1] == courseShort)
+        const courseRow = dictData.values.slice(1).find(r => r[1] === courseShort);
+        if (!courseRow) {
+          document.getElementById("products").innerHTML = `<p>Не знайдено курс із короткою назвою: ${courseShort}</p>`;
           return;
         }
-        const products = data.values.slice(1).filter(row => row[1] === courseShort);
+        // row[0] – це повна назва курсу
+        const fullCourseName = courseRow[0];
+        
+        // Встановлюємо заголовок
+        const productsDiv = document.getElementById("products");
+        productsDiv.innerHTML = `<h2>Товари для курсу: ${fullCourseName}</h2>`;
+        
+        // Завантажуємо лист "SKLAD" (де зберігаються товари)
+        const skladUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/SKLAD?key=${apiKey}`;
+        const skladResp = await fetch(skladUrl);
+        const skladData = await skladResp.json();
+        
+        // Якщо в листі SKLAD немає даних
+        if (!skladData.values || skladData.values.length === 0) {
+          productsDiv.innerHTML += "<p>Немає товарів у таблиці SKLAD.</p>";
+          return;
+        }
+        
+        // Фільтруємо товари, де row[1] == courseShort
+        const products = skladData.values.slice(1).filter(row => row[1] === courseShort);
         if (products.length === 0) {
           productsDiv.innerHTML += "<p>Немає товарів для цього курсу.</p>";
           return;
         }
         
+        // Створюємо список
         const list = document.createElement("ul");
         products.forEach(row => {
           // Припустимо: row[2] - назва товару, row[5] - ціна
           const li = document.createElement("li");
           
-          // Створюємо контейнер для розміщення тексту та кнопок
+          // Контейнер для розміщення тексту та кнопок
           const rowContainer = document.createElement("div");
           rowContainer.className = "row-container";
           
@@ -190,9 +231,23 @@
           list.appendChild(li);
         });
         
+        // Додаємо список на сторінку
         productsDiv.appendChild(list);
+        
+        // Додаємо кнопку "Додати в кошик" внизу списку
+        const addToCartBtn = document.createElement("button");
+        addToCartBtn.className = "add-to-cart";
+        addToCartBtn.textContent = "Додати в кошик";
+        
+        // Тут можна додати логіку, що відбувається при натисканні
+        addToCartBtn.addEventListener("click", () => {
+          alert("Ви натиснули «Додати в кошик»! (тут буде ваша логіка)");
+        });
+        
+        productsDiv.appendChild(addToCartBtn);
+        
       } catch (error) {
-        console.error("Помилка отримання товарів:", error);
+        console.error("Помилка отримання даних:", error);
       }
     }
     
