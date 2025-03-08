@@ -9,7 +9,16 @@ from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 
 # Отримуємо JSON-об'єкт облікових даних без файлу
-CREDENTIALS_JSON = json.loads(os.getenv("CREDENTIALS_FILE"))
+CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
+
+if not CREDENTIALS_FILE:
+    raise ValueError("❌ Змінна середовища CREDENTIALS_FILE не знайдена!")
+
+try:
+    CREDENTIALS_JSON = json.loads(CREDENTIALS_FILE)
+except json.JSONDecodeError as e:
+    raise ValueError(f"❌ Помилка розбору JSON в CREDENTIALS_FILE: {e}")
+
 SHEET_SKLAD = os.getenv("SHEET_SKLAD")
 
 # Підключення до Google Sheets через JSON
