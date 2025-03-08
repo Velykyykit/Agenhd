@@ -26,7 +26,6 @@ except json.JSONDecodeError as e:
 FONT_PATH = os.path.join("/app/config/fonts", "DejaVuSans.ttf")
 
 async def get_sklad_menu():
-    """Меню для розділу складу."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text="🛒 Зробити Замовлення",
@@ -35,11 +34,9 @@ async def get_sklad_menu():
         [InlineKeyboardButton(text="📊 Перевірити Наявність", callback_data="check_stock")]
     ])
 
-async def handle_sklad(message):
+async def handle_sklad(message: types.Message):
     """Обробка розділу складу."""
     await message.answer("📦 Ви у розділі складу. Оберіть дію:", reply_markup=await get_sklad_menu())
-    keyboard = await get_restart_keyboard()
-    await message.answer("🔄 Якщо хочете повернутися назад, натисніть кнопку:", reply_markup=keyboard)
 
 async def get_all_stock():
     """Отримання даних складу."""
