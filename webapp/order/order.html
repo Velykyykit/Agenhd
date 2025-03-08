@@ -1,1 +1,142 @@
-
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Виберіть курс</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: #ffffff;
+      color: #000;
+    }
+    .container {
+      padding: 20px;
+      max-width: 100%;
+      margin: 0 auto;
+      text-align: center;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      justify-content: center;
+    }
+    .course-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      text-align: center;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      text-decoration: none;
+      color: inherit;
+      width: 100%;
+      max-width: 300px;
+      aspect-ratio: 1/1;
+      overflow: hidden;
+    }
+    .course-button img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .course-button:hover {
+      background: #ddd;
+    }
+    /* Адаптація для маленьких екранів */
+    @media (max-width: 500px) {
+      .grid-container {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      }
+      .course-button {
+        font-size: 14px;
+        max-width: 150px;
+      }
+    }
+    /* Адаптація для планшетів */
+    @media (min-width: 501px) and (max-width: 1024px) {
+      .grid-container {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      }
+      .course-button {
+        max-width: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Виберіть курс</h1>
+    <div class="grid-container" id="catalog">
+      <p>Завантаження...</p>
+    </div>
+  </div>
+  <script>
+    async function loadConfig() {
+      try {
+        const response = await fetch("../../config.js");
+        if (!response.ok) throw new Error("Не вдалося завантажити config.js");
+        const script = document.createElement("script");
+        script.src = "../../config.js";
+        document.head.appendChild(script);
+        await new Promise(resolve => script.onload = resolve);
+        const SHEET_SKLAD = window.CONFIG.SHEET_SKLAD;
+        const GOOGLE_API_KEY = window.CONFIG.GOOGLE_API_KEY;
+        fetchCourses(SHEET_SKLAD, GOOGLE_API_KEY);
+      } catch (error) {
+        console.error("Помилка завантаження конфігурації:", error);
+      }
+    }
+    
+    async function fetchCourses(sheetId, apiKey) {
+      const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/dictionary?key=${apiKey}`;
+      try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error("Не вдалося отримати дані з Google Sheets");
+        const data = await response.json();
+        const catalogDiv = document.getElementById("catalog");
+        catalogDiv.innerHTML = "";
+        if (!data.values || data.values.length === 0) {
+          catalogDiv.innerHTML = "<p>Немає даних у таблиці</p>";
+          return;
+        }
+        data.values.slice(1).forEach(row => {
+          const courseName = row[0];
+          const courseShort = row[1];
+          const imagePath = `../../webapp/img/courses/${courseShort}.jpg`;
+          const link = document.createElement("a");
+          link.href = `../../webapp/order/products.html?course=${courseShort}`;
+          link.className = "course-button";
+          const img = new Image();
+          img.src = imagePath;
+          img.onload = () => {
+            link.innerHTML = `<img src="${imagePath}" alt="${courseName}" loading="lazy">`;
+          };
+          img.onerror = () => {
+            link.innerHTML = courseName;
+          };
+          catalogDiv.appendChild(link);
+        });
+      } catch (error) {
+        console.error("Помилка отримання каталогу:", error);
+      }
+    }
+    
+    loadConfig();
+  </script>
+  <script src="../../config.js"></script>
+</body>
+</html>
