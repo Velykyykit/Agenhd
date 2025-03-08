@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
-  <title>Каталог кусів</title>
+  <title>Каталог курсів</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
@@ -33,43 +33,88 @@
     .catalog-item p {
       margin: 5px 0;
     }
+    #debug {
+      background: #eee;
+      padding: 10px;
+      margin-top: 20px;
+      border-radius: 5px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Каталог кусів</h1>
+    <h1>Каталог курсів</h1>
     <div id="catalog">
       <p>Завантаження...</p>
+    </div>
+    <div id="debug">
+      <h2>Debug Info:</h2>
+      <pre id="debug-info"></pre>
     </div>
   </div>
 
   <script>
-    const apiUrl = "https://velykyykit.github.io/telegram-bot/api/get_courses"; // Змініть на ваш сервер
-
-    async function fetchCatalog() {
-      try {
-        const response = await fetch(apiUrl);
-        const data = await response.json();
-        const catalogDiv = document.getElementById("catalog");
-        catalogDiv.innerHTML = ""; 
-
-        data.courses.forEach(item => {
-          const itemDiv = document.createElement("div");
-          itemDiv.className = "catalog-item";
-          itemDiv.innerHTML = `
-            <h2>${item.name}</h2>
-            <p>${item.description}</p>
-            <p><strong>Ціна:</strong> ${item.price} грн</p>
-          `;
-          catalogDiv.appendChild(itemDiv);
-        });
-      } catch (error) {
-        console.error("Помилка отримання каталогу:", error);
-        document.getElementById("catalog").innerHTML = "<p>Помилка завантаження</p>";
-      }
+    async function loadConfig() {
+        try {
+            const response = await fetch("config.js");
+            const script = document.createElement("script");
+            script.src = "config.js";
+            document.head.appendChild(script);
+            await new Promise(resolve => script.onload = resolve);
+            
+            const SHEET_SKLAD = window.CONFIG.SHEET_SKLAD;
+            const GOOGLE_API_KEY = window.CONFIG.GOOGLE_API_KEY;
+            
+            console.log("SHEET_SKLAD:", SHEET_SKLAD);
+            console.log("GOOGLE_API_KEY:", GOOGLE_API_KEY);
+            document.getElementById("debug-info").textContent += `SHEET_SKLAD: ${SHEET_SKLAD}\nGOOGLE_API_KEY: ${GOOGLE_API_KEY}\n`;
+            
+            fetchCatalog(SHEET_SKLAD, GOOGLE_API_KEY);
+        } catch (error) {
+            console.error("Помилка завантаження конфігурації:", error);
+            document.getElementById("debug-info").textContent += `Помилка завантаження конфігурації: ${error}\n`;
+        }
     }
 
-    fetchCatalog();
+    async function fetchCatalog(sheetId, apiKey) {
+        const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/dictionary?key=${apiKey}`;
+        
+        try {
+            console.log("Запит до API:", apiUrl);
+            document.getElementById("debug-info").textContent += `Запит до API: ${apiUrl}\n`;
+            
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            console.log("Отримані дані:", data);
+            document.getElementById("debug-info").textContent += `Отримані дані: ${JSON.stringify(data, null, 2)}\n`;
+            
+            const catalogDiv = document.getElementById("catalog");
+            catalogDiv.innerHTML = "";
+            
+            if (!data.values || data.values.length === 0) {
+                catalogDiv.innerHTML = "<p>Немає даних у таблиці</p>";
+                document.getElementById("debug-info").textContent += "Немає даних у таблиці\n";
+                return;
+            }
+
+            data.values.slice(1).forEach(row => {
+                const itemDiv = document.createElement("div");
+                itemDiv.className = "catalog-item";
+                itemDiv.innerHTML = `
+                    <h2>${row[0]}</h2>
+                    <p><strong>Коротка назва:</strong> ${row[1]}</p>
+                `;
+                catalogDiv.appendChild(itemDiv);
+            });
+        } catch (error) {
+            console.error("Помилка отримання каталогу:", error);
+            document.getElementById("catalog").innerHTML = "<p>Помилка завантаження</p>";
+            document.getElementById("debug-info").textContent += `Помилка отримання каталогу: ${error}\n`;
+        }
+    }
+
+    loadConfig();
   </script>
+  <script src="config.js"></script>
 </body>
 </html>
