@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
-  <title>Виберіть курс</title>
+  <title>Виберіть курс 🎓</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
@@ -79,7 +79,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>Виберіть курс</h1>
+    <h1>🎓 Виберіть курс</h1>
     <div class="grid-container" id="catalog">
       <p>Завантаження...</p>
     </div>
@@ -126,7 +126,8 @@
             link.innerHTML = `<img src="${imagePath}" alt="${courseName}" loading="lazy">`;
           };
           img.onerror = () => {
-            link.innerHTML = courseName;
+            // Додаємо емоджі, якщо зображення не завантажилося
+            link.innerHTML = `${courseName} 📚`;
           };
           catalogDiv.appendChild(link);
         });
