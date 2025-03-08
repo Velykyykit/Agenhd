@@ -1,33 +1,29 @@
 import os
-import time
-import json
 import gspread
-from aiogram import types, Router
+import time
+from aiogram import types
 from aiogram_dialog import Dialog, Window, DialogManager
 from aiogram_dialog.widgets.kbd import ScrollingGroup, Select, Button, Row
 from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import StatesGroup, State
 
 # Підключення до Google Sheets
-credentials_json = os.getenv("CREDENTIALS_FILE")
-if credentials_json:
-    credentials_dict = json.loads(credentials_json)
-
-else:
-    raise ValueError("❌ Не знайдено CREDENTIALS_FILE у змінних середовища!")
+CREDENTIALS_PATH = os.path.join("/app", os.getenv("CREDENTIALS_FILE"))
 SHEET_SKLAD = os.getenv("SHEET_SKLAD")
 
-gc = gspread.service_account_from_dict(credentials_dict)
+gc = gspread.service_account(filename=CREDENTIALS_PATH)
 sh = gc.open_by_key(SHEET_SKLAD)
 worksheet_courses = sh.worksheet("dictionary")
 worksheet_sklad = sh.worksheet("SKLAD")
 
+# Кеш для збереження даних
 CACHE_EXPIRY = 300  # 5 хвилин
 cache = {
     "courses": {"data": [], "timestamp": 0},
     "products": {"data": {}, "timestamp": 0}
 }
 
+# Стан вибору курсу і товару
 class OrderSG(StatesGroup):
     select_course = State()
     show_products = State()
@@ -37,8 +33,10 @@ async def get_courses(**kwargs):
     now = time.time()
     if now - cache["courses"]["timestamp"] < CACHE_EXPIRY:
         return {"courses": cache["courses"]["data"]}
+    
     rows = worksheet_courses.get_all_records()
     courses = [{"name": row["course"], "short": row["short"]} for row in rows][:20]
+    
     cache["courses"] = {"data": courses, "timestamp": now}
     return {"courses": courses}
 
@@ -46,14 +44,17 @@ async def get_products(dialog_manager: DialogManager, **kwargs):
     selected_course = dialog_manager.dialog_data.get("selected_course", None)
     if not selected_course:
         return {"products": []}
+    
     now = time.time()
     if selected_course in cache["products"] and now - cache["products"][selected_course]["timestamp"] < CACHE_EXPIRY:
         return {"products": cache["products"][selected_course]["data"]}
+    
     rows = worksheet_sklad.get_all_records()
     products = [
         {"id": str(index), "name": row["name"], "price": row["price"]}
         for index, row in enumerate(rows, start=1) if row["course"] == selected_course
     ]
+    
     cache["products"][selected_course] = {"data": products, "timestamp": now}
     return {"products": products}
 
@@ -77,7 +78,7 @@ async def change_quantity(callback: types.CallbackQuery, widget, manager: Dialog
         quantity -= 1
     manager.dialog_data["quantity"] = quantity
     await callback.answer()
-    await manager.show()
+    await manager.show()  # Оновлюємо вікно
 
 async def confirm_selection(callback: types.CallbackQuery, widget, manager: DialogManager):
     """Підтвердження вибору кількості"""
@@ -131,7 +132,7 @@ quantity_window = Window(
     Format("🖼 Фото товару тут\n📦 Товар: {dialog_data[selected_product]}"),
     Row(
         Button(Const("➖"), id="decrease_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "decrease")),
-        Button(Format("{dialog_data[quantity]}"), id="quantity_display"),
+        Button(Format("{dialog_data[quantity]}"), id="quantity_display"),  # Виправлено
         Button(Const("➕"), id="increase_quantity", on_click=lambda c, w, m: change_quantity(c, w, m, "increase")),
     ),
     Row(
@@ -142,93 +143,3 @@ quantity_window = Window(
 )
 
 order_dialog = Dialog(course_window, product_window, quantity_window)
-
-# === Веб-інтерфейс через FastAPI (залишається без змін) ===
-from fastapi import APIRouter, Request, Form
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-
-web_router = APIRouter()
-templates = Jinja2Templates(directory="templates")
-
-# In-memory дані для веб-інтерфейсу:
-web_courses = {
-    1: {"name": "Курс A"},
-    2: {"name": "Курс B"}
-}
-web_products = {
-    1: [
-        {"id": 101, "name": "Бургер", "price": 4.99, "img": "https://via.placeholder.com/50"},
-        {"id": 102, "name": "Картопля фрі", "price": 1.49, "img": "https://via.placeholder.com/50"}
-    ],
-    2: [
-        {"id": 201, "name": "Піцца", "price": 7.99, "img": "https://via.placeholder.com/50"},
-        {"id": 202, "name": "Пончик", "price": 1.99, "img": "https://via.placeholder.com/50"}
-    ]
-}
-web_cart = {}  # In-memory "кошик" для веб-інтерфейсу
-
-@web_router.get("/", response_class=HTMLResponse)
-def order_index(request: Request):
-    return templates.TemplateResponse("order_index.html", {"request": request, "courses": web_courses})
-
-@web_router.get("/course/{course_id}", response_class=HTMLResponse)
-def course_page(request: Request, course_id: int):
-    items = web_products.get(course_id, [])
-    cart_items = {item["id"]: web_cart.get(item["id"], 0) for item in items}
-    course_name = web_courses.get(course_id, {}).get("name", "Невідомий курс")
-    return templates.TemplateResponse("order_course.html", {
-        "request": request,
-        "course_id": course_id,
-        "course_name": course_name,
-        "items": items,
-        "cart_items": cart_items
-    })
-
-@web_router.post("/update_cart", response_class=HTMLResponse)
-def update_cart(request: Request, course_id: int = Form(...), item_id: int = Form(...), action: str = Form(...)):
-    current_qty = web_cart.get(item_id, 0)
-    if action == "plus":
-        current_qty += 1
-    elif action == "minus" and current_qty > 0:
-        current_qty -= 1
-    web_cart[item_id] = current_qty
-    items = web_products.get(course_id, [])
-    cart_items = {item["id"]: web_cart.get(item["id"], 0) for item in items}
-    course_name = web_courses.get(course_id, {}).get("name", "Невідомий курс")
-    return templates.TemplateResponse("order_course.html", {
-        "request": request,
-        "course_id": course_id,
-        "course_name": course_name,
-        "items": items,
-        "cart_items": cart_items
-    })
-
-@web_router.post("/confirm", response_class=HTMLResponse)
-def confirm_order(request: Request, course_id: int = Form(...)):
-    items = web_products.get(course_id, [])
-    chosen = []
-    for item in items:
-        qty = web_cart.get(item["id"], 0)
-        if qty > 0:
-            chosen.append((item["name"], qty))
-    return templates.TemplateResponse("order_confirm.html", {"request": request, "chosen": chosen})
-
-# Експортуємо веб-роутер для FastAPI-додатку
-order_router = web_router
-
-# === Роутер для Telegram Mini App (WebApp) ===
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
-from aiogram.filters import Command  # якщо потрібен, але тут ми використовуємо callback
-
-router_catalog = Router()
-
-@router_catalog.callback_query(lambda c: c.data == "order")
-async def open_order_webapp(call: types.CallbackQuery):
-    await call.answer()
-    # Вкажіть URL вашого веб-інтерфейсу, де розміщено Web App (HTTPS!)
-    web_app_url = "https://velykyykit.github.io/telegram-mini-app/"  # Замініть на ваш URL, якщо потрібно
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Зробити замовлення", web_app=WebAppInfo(url=web_app_url))]
-    ])
-    await call.message.answer("Натисніть кнопку нижче, щоб зробити замовлення:", reply_markup=keyboard)
