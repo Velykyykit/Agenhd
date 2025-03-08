@@ -24,7 +24,6 @@ from menu.keyboards import get_phone_keyboard, get_restart_keyboard
 # === aiogram-dialog ===
 from aiogram_dialog import setup_dialogs, StartMode
 from aiogram_dialog import DialogManager
-from data.sklad.order import order_dialog, OrderSG  
 
 # Перегляд замовлень («Для мене»)
 from data.For_me.me import show_my_orders
