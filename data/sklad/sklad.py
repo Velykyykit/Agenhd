@@ -30,7 +30,7 @@ async def get_sklad_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text="🛒 Зробити Замовлення",
-            web_app=WebAppInfo(url="https://velykyykit.github.io/telegram-bot/")
+            web_app=WebAppInfo(url="https://velykyykit.github.io/Agenhd/")
         )],
         [InlineKeyboardButton(text="📊 Перевірити Наявність", callback_data="check_stock")]
     ])
