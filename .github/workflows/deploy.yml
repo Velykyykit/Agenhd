@@ -1,0 +1,32 @@
+name: Deploy WebApp to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout репозиторій
+        uses: actions/checkout@v3
+
+      - name: Створення `config.js` зі змінними
+        run: |
+          echo "window.CONFIG = {" > config.js
+          echo "  SHEET_SKLAD: '${{ secrets.SHEET_SKLAD }}'," >> config.js
+          echo "  SHEET_ID: '${{ secrets.SHEET_ID }}'," >> config.js
+          echo "  GOOGLE_API_KEY: '${{ secrets.GOOGLE_API_KEY }}'" >> config.js
+          echo "};" >> config.js
+
+      - name: Деплой у GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: .
