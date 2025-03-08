@@ -41,29 +41,42 @@
     <div id="catalog">
       <p>Завантаження...</p>
     </div>
+    <div id="debug">
+      <h2>Debug Info:</h2>
+      <pre id="debug-info"></pre>
+    </div>
   </div>
 
   <script>
     // Отримуємо параметри з URL
     const urlParams = new URLSearchParams(window.location.search);
     const SHEET_SKLAD = urlParams.get("sheet_sklad");
-
+    
     console.log("Отримано SHEET_SKLAD:", SHEET_SKLAD);
-
+    document.getElementById("debug-info").textContent += `SHEET_SKLAD: ${SHEET_SKLAD}\n`;
+    
     if (!SHEET_SKLAD) {
       document.getElementById("catalog").innerHTML = "<p>Помилка: Не передано параметр sheet_sklad</p>";
+      document.getElementById("debug-info").textContent += "Помилка: Не передано параметр sheet_sklad\n";
     } else {
       const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_SKLAD}/values/dictionary?key=ВАШ_GOOGLE_API_KEY`;
-
+      
       async function fetchCatalog() {
         try {
+          console.log("Запит до API:", apiUrl);
+          document.getElementById("debug-info").textContent += `Запит до API: ${apiUrl}\n`;
+          
           const response = await fetch(apiUrl);
           const data = await response.json();
+          console.log("Отримані дані:", data);
+          document.getElementById("debug-info").textContent += `Отримані дані: ${JSON.stringify(data, null, 2)}\n`;
+          
           const catalogDiv = document.getElementById("catalog");
           catalogDiv.innerHTML = "";
 
           if (!data.values || data.values.length === 0) {
             catalogDiv.innerHTML = "<p>Немає даних у таблиці</p>";
+            document.getElementById("debug-info").textContent += "Немає даних у таблиці\n";
             return;
           }
 
@@ -79,6 +92,7 @@
         } catch (error) {
           console.error("Помилка отримання каталогу:", error);
           document.getElementById("catalog").innerHTML = "<p>Помилка завантаження</p>";
+          document.getElementById("debug-info").textContent += `Помилка отримання каталогу: ${error}\n`;
         }
       }
 
