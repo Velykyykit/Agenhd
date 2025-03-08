@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import json
+from aiohttp import web  # ✅ Додаємо aiohttp для API сервера
 
 from aiogram import Bot, Dispatcher, types, Router, F
 from aiogram.types import (
@@ -136,8 +137,25 @@ async def start_order_dialog(call: types.CallbackQuery, dialog_manager: DialogMa
     await call.answer()
     await dialog_manager.start(OrderSG.select_course, mode=StartMode.RESET_STACK)
 
+### ✅ **API для WebApp**
+async def get_courses(request):
+    """Повертає список курсів для WebApp."""
+    courses = [
+        {"name": "Курс 1", "description": "Опис курсу 1", "price": 500},
+        {"name": "Курс 2", "description": "Опис курсу 2", "price": 800}
+    ]
+    return web.json_response({"courses": courses})
+
+app = web.Application()
+app.router.add_get("/api/get_courses", get_courses)
+
 async def main():
-    """Запуск бота в режимі polling."""
+    """Запуск бота в режимі polling та сервера WebApp API."""
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", 8000)  # Запускаємо сервер на порту 8000
+    await site.start()
+
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
