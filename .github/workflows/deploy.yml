@@ -25,6 +25,14 @@ jobs:
           echo "  GOOGLE_API_KEY: '${{ secrets.GOOGLE_API_KEY }}'" >> config.js
           echo "};" >> config.js
 
+      - name: Commit `config.js`
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add config.js
+          git commit -m "Added config.js from GitHub Secrets"
+          git push origin main
+
       - name: Перевірка файлу `config.js`
         run: cat config.js
 
@@ -33,4 +41,3 @@ jobs:
         with:
           branch: gh-pages
           folder: .
-          clean: true  # Очищає старі файли перед деплоєм
