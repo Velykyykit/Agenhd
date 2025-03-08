@@ -82,9 +82,13 @@ async def handle_contact(message: types.Message):
     logging.info(f"[DEBUG] Отримано номер: {phone_number}")
 
     try:
+        # Перевірка користувача в базі
         user_data = await auth_manager.check_user_in_database(phone_number)
         logging.info(f"[DEBUG] Відповідь від auth.py: {user_data}")
         if user_data:
+            # Додаємо телефон до user_data, щоб зберегти його для WebApp
+            user_data["phone"] = phone_number
+
             # Зберігаємо дані користувача в глобальному словнику
             USER_DATA[message.from_user.id] = user_data
 
@@ -106,7 +110,10 @@ async def handle_sklad_call(call: types.CallbackQuery):
     """Обробник натискання кнопки '📦 Склад'."""
     await call.answer()
     # Отримуємо дані користувача з глобального словника; якщо їх немає, використовуємо значення за замовчуванням.
-    user_data = USER_DATA.get(call.from_user.id, {"name": call.from_user.first_name, "phone": "не вказано"})
+    user_data = USER_DATA.get(call.from_user.id, {
+        "name": call.from_user.first_name, 
+        "phone": "не вказано"
+    })
     await handle_sklad(call.message, user_data)
 
 @router.callback_query(F.data == "check_stock")
