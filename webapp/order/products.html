@@ -54,7 +54,7 @@
     .quantity-container {
       display: inline-flex;
       align-items: center;
-      background: linear-gradient(to bottom, #9b59b6, #8e44ad); /* Фіолетовий градієнт */
+      background: linear-gradient(to bottom, #9b59b6, #8e44ad);
       border-radius: 20px;
       padding: 2px 6px;
       box-shadow: inset 0 0 1px #fff, 0 2px 3px rgba(0,0,0,0.2);
@@ -89,10 +89,10 @@
     .quantity-container input:focus {
       outline: 2px solid #ddd;
     }
-    /* Кнопка "Додати в кошик" (у такому ж стилі) */
+    /* Кнопка "Додати у корзину" */
     .add-to-cart {
       display: block;
-      margin: 20px auto 0; /* центруємо, відступ зверху */
+      margin: 20px auto 0;
       padding: 10px 20px;
       background: linear-gradient(to bottom, #9b59b6, #8e44ad);
       border-radius: 20px;
@@ -117,6 +117,15 @@
     <div id="products" class="product-list">Завантаження...</div>
   </div>
   <script>
+    // Ініціалізуємо тимчасове сховище для корзини
+    window.cart = [];
+
+    // Функція-заглушка для оновлення таблиці замовлень (SHEET_ORDER) – для майбутнього функціоналу
+    function updateOrderSheet(orderData) {
+      console.log("Оновлення таблиці замовлень SHEET_ORDER з даними:", orderData);
+      alert("Дані для оновлення замовлень відправлено (stub).");
+    }
+    
     async function loadConfig() {
       try {
         const response = await fetch("../../config.js");
@@ -126,6 +135,8 @@
         await new Promise(resolve => script.onload = resolve);
         const SHEET_SKLAD = window.CONFIG.SHEET_SKLAD;
         const GOOGLE_API_KEY = window.CONFIG.GOOGLE_API_KEY;
+        // Зберігаємо SHEET_ORDER для подальшої роботи
+        window.SHEET_ORDER = window.CONFIG.SHEET_ORDER;
         fetchProducts(SHEET_SKLAD, GOOGLE_API_KEY);
       } catch (error) {
         console.error("Помилка завантаження конфігурації:", error);
@@ -141,30 +152,27 @@
       }
       
       try {
-        // Завантажуємо всю таблицю "dictionary" (де зберігаються назви курсів)
+        // Завантажуємо таблицю "dictionary" для отримання повної назви курсу
         const dictUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/dictionary?key=${apiKey}`;
         const dictResp = await fetch(dictUrl);
         const dictData = await dictResp.json();
         
-        // Шукаємо рядок із відповідною короткою назвою (row[1] == courseShort)
         const courseRow = dictData.values.slice(1).find(r => r[1] === courseShort);
         if (!courseRow) {
           document.getElementById("products").innerHTML = `<p>Не знайдено курс із короткою назвою: ${courseShort}</p>`;
           return;
         }
-        // row[0] – це повна назва курсу
+        // Використовуємо повну назву курсу (row[0])
         const fullCourseName = courseRow[0];
         
-        // Встановлюємо заголовок
         const productsDiv = document.getElementById("products");
         productsDiv.innerHTML = `<h2>Товари для курсу: ${fullCourseName}</h2>`;
         
-        // Завантажуємо лист "SKLAD" (де зберігаються товари)
+        // Завантажуємо лист "SKLAD" з товарами
         const skladUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/SKLAD?key=${apiKey}`;
         const skladResp = await fetch(skladUrl);
         const skladData = await skladResp.json();
         
-        // Якщо в листі SKLAD немає даних
         if (!skladData.values || skladData.values.length === 0) {
           productsDiv.innerHTML += "<p>Немає товарів у таблиці SKLAD.</p>";
           return;
@@ -177,21 +185,20 @@
           return;
         }
         
-        // Створюємо список
         const list = document.createElement("ul");
         products.forEach(row => {
-          // Припустимо: row[2] - назва товару, row[5] - ціна
+          // Припускаємо: row[0] - id товару, row[2] - назва товару, row[5] - ціна
           const li = document.createElement("li");
+          // Зберігаємо id та назву як data-атрибути для подальшого використання
+          li.dataset.productId = row[0];
+          li.dataset.productName = row[2];
           
-          // Контейнер для розміщення тексту та кнопок
           const rowContainer = document.createElement("div");
           rowContainer.className = "row-container";
           
-          // Інформація про товар (зліва)
           const productInfo = document.createElement("div");
           productInfo.innerHTML = `<strong>${row[2]}</strong> – ${row[5]} грн`;
           
-          // Контейнер для кнопок і поля введення (справа)
           const qtyContainer = document.createElement("div");
           qtyContainer.className = "quantity-container";
           
@@ -206,14 +213,12 @@
           const plusButton = document.createElement("button");
           plusButton.textContent = "+";
           
-          // Логіка зменшення
           minusButton.addEventListener("click", () => {
             let current = parseInt(quantityInput.value) || 0;
             if (current > 0) {
               quantityInput.value = current - 1;
             }
           });
-          // Логіка збільшення
           plusButton.addEventListener("click", () => {
             let current = parseInt(quantityInput.value) || 0;
             quantityInput.value = current + 1;
@@ -223,7 +228,6 @@
           qtyContainer.appendChild(quantityInput);
           qtyContainer.appendChild(plusButton);
           
-          // Додаємо все до rowContainer
           rowContainer.appendChild(productInfo);
           rowContainer.appendChild(qtyContainer);
           
@@ -231,17 +235,32 @@
           list.appendChild(li);
         });
         
-        // Додаємо список на сторінку
         productsDiv.appendChild(list);
         
-        // Додаємо кнопку "Додати в кошик" внизу списку
+        // Додаємо кнопку "Додати у корзину" внизу списку
         const addToCartBtn = document.createElement("button");
         addToCartBtn.className = "add-to-cart";
-        addToCartBtn.textContent = "Додати в кошик";
+        addToCartBtn.textContent = "Додати у корзину";
         
-        // Тут можна додати логіку, що відбувається при натисканні
         addToCartBtn.addEventListener("click", () => {
-          alert("Ви натиснули «Додати в кошик»! (тут буде ваша логіка)");
+          // Для кожного товару зі списку перевіряємо введену кількість і, якщо > 0, додаємо до корзини
+          const items = list.querySelectorAll("li");
+          items.forEach(li => {
+            const qtyInput = li.querySelector("input");
+            const quantity = parseInt(qtyInput.value) || 0;
+            if (quantity > 0) {
+              const productId = li.dataset.productId;
+              const productName = li.dataset.productName;
+              // Додаємо в глобальне тимчасове сховище (масив window.cart)
+              window.cart.push({
+                id: productId,
+                name: productName,
+                quantity: quantity
+              });
+            }
+          });
+          console.log("Корзина:", window.cart);
+          updateOrderSheet(window.cart);
         });
         
         productsDiv.appendChild(addToCartBtn);
