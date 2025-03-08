@@ -11,7 +11,7 @@ from aiogram.types import (
 )
 from aiogram.fsm.storage.memory import MemoryStorage
 
-# Аутентифікація (оновлений модуль)
+# Аутентифікація
 from config.auth import AuthManager
 
 # Логіка складу
@@ -71,11 +71,9 @@ async def send_welcome(message: types.Message):
 
 @router.message(F.contact)
 async def handle_contact(message: types.Message):
-    """
-    Обробляє отриманий контакт і виконує аутентифікацію.
-    """
+    """Обробка отриманого контакту та аутентифікація."""
     if message.contact.user_id != message.from_user.id:
-        await message.answer("❌ Скористайтеся кнопкою '📲 Поділитися номером'")
+        await message.answer("❌ Скористайтеся кнопкою '📲 Поділитися номером'.")
         return
 
     phone_number = auth_manager.clean_phone_number(message.contact.phone_number)
@@ -97,9 +95,46 @@ async def handle_contact(message: types.Message):
         await message.answer("❌ Сталася помилка під час перевірки номера. Спробуйте пізніше.")
         logging.error(f"❌ ПОМИЛКА: {e}")
 
-# Замість DialogRegistry: підключаємо middleware для aiogram-dialog
+### ✅ **ОБРОБНИКИ CALLBACK-КНОПОК**
+@router.callback_query(F.data == "sklad")
+async def handle_sklad_call(call: types.CallbackQuery):
+    """Обробник натискання кнопки '📦 Склад'."""
+    await call.answer()
+    await handle_sklad(call.message)
+
+@router.callback_query(F.data == "check_stock")
+async def handle_stock_check(call: types.CallbackQuery):
+    """Перевіряє наявність товарів (генерує PDF)."""
+    await call.answer()
+    await show_all_stock(call)
+
+@router.callback_query(F.data == "tasks")
+async def handle_tasks(call: types.CallbackQuery):
+    """Розділ 'Завдання' (поки в розробці)."""
+    await call.answer()
+    await call.message.answer("📝 Розділ 'Завдання' ще в розробці.")
+
+@router.callback_query(F.data == "forme")
+async def handle_forme(call: types.CallbackQuery):
+    """Розділ 'Для мене' – перегляд замовлень."""
+    await call.answer()
+    await show_my_orders(call.message)
+
+@router.message(F.text == "🔄 Почати спочатку")
+async def restart_handler(message: types.Message):
+    """Кнопка 'Почати спочатку' повертає користувача в головне меню."""
+    await message.answer("🔄 Починаємо спочатку", reply_markup=ReplyKeyboardRemove())
+    await message.answer("📌 Оберіть розділ:", reply_markup=get_main_menu())
+
+# Підключаємо aiogram-dialog
 setup_dialogs(dp)
 dp.include_router(order_dialog)
+
+@router.callback_query(F.data == "order")
+async def start_order_dialog(call: types.CallbackQuery, dialog_manager: DialogManager):
+    """Запуск діалогу для оформлення замовлення."""
+    await call.answer()
+    await dialog_manager.start(OrderSG.select_course, mode=StartMode.RESET_STACK)
 
 async def main():
     """Запуск бота в режимі polling."""
