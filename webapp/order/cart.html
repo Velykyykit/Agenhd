@@ -65,7 +65,7 @@
       font-size: 18px;
     }
     .cart-item .quantity-container {
-      display: inline-flex;
+      display: flex;
       align-items: center;
       background: linear-gradient(to bottom, #9b59b6, #8e44ad);
       border-radius: 20px;
@@ -73,13 +73,6 @@
       box-shadow: inset 0 0 1px #fff, 0 2px 3px rgba(0,0,0,0.2);
     }
     .cart-item button {
-      background: none;
-      border: none;
-      color: red;
-      font-size: 18px;
-      cursor: pointer;
-    }
-    .cart-item .quantity-container button {
       background: transparent;
       border: none;
       color: #fff;
@@ -92,11 +85,11 @@
       border-radius: 50%;
       transition: background-color 0.3s, transform 0.2s;
     }
-    .cart-item .quantity-container button:hover {
+    .cart-item button:hover {
       background-color: rgba(255,255,255,0.2);
       transform: scale(1.1);
     }
-    .cart-item .quantity-container input {
+    .cart-item input {
       width: 40px;
       text-align: center;
       font-size: 16px;
@@ -105,6 +98,9 @@
       margin: 0 5px;
       background: #fff;
       color: #000;
+    }
+    .cart-item input:focus {
+      outline: 2px solid #ddd;
     }
     .cart-actions {
       margin-top: 20px;
@@ -156,28 +152,27 @@
           <span>${item.name}</span>
           <div class="quantity-container">
             <button onclick="updateQuantity(${index}, -1)">–</button>
-            <input type="number" value="${item.quantity}" min="1" readonly>
+            <input type="number" value="${item.quantity}" min="0" onchange="updateQuantity(${index}, 0, this.value)">
             <button onclick="updateQuantity(${index}, 1)">+</button>
           </div>
-          <button onclick="removeFromCart(${index})">❌</button>
         `;
         cartContainer.appendChild(div);
       });
     }
 
-    function updateQuantity(index, change) {
+    function updateQuantity(index, change, customValue = null) {
       let cart = getCart();
-      cart[index].quantity += change;
-      if (cart[index].quantity <= 0) {
+
+      if (customValue !== null) {
+        cart[index].quantity = Math.max(0, parseInt(customValue) || 0);
+      } else {
+        cart[index].quantity = Math.max(0, cart[index].quantity + change);
+      }
+
+      if (cart[index].quantity === 0) {
         cart.splice(index, 1);
       }
-      saveCart(cart);
-      loadCart();
-    }
 
-    function removeFromCart(index) {
-      let cart = getCart();
-      cart.splice(index, 1);
       saveCart(cart);
       loadCart();
     }
@@ -196,7 +191,7 @@
     }
 
     function goBack() {
-      window.location.href = "order.html";
+      window.history.back();
     }
 
     loadCart();
