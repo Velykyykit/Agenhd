@@ -16,15 +16,43 @@
       max-width: 700px;
       margin: 0 auto;
       text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     #user-info {
       margin-bottom: 15px;
       font-size: 16px;
       font-weight: bold;
+      flex: 1;
+      text-align: left;
+    }
+    .header-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
     }
     h1 {
       margin-bottom: 20px;
       font-size: 24px;
+      text-align: left;
+      flex: 1;
+    }
+    .cart-button {
+      background: linear-gradient(to bottom, #9b59b6, #8e44ad);
+      border-radius: 20px;
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      padding: 10px 20px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    .cart-button:hover {
+      background-color: rgba(255,255,255,0.2);
+      transform: scale(1.05);
     }
     .grid-container {
       display: grid;
@@ -64,15 +92,16 @@
 </head>
 <body>
   <div class="container">
-    <!-- Відображення інформації про користувача -->
     <div id="user-info">Завантаження даних користувача...</div>
+  </div>
+  <div class="header-container">
     <h1>🎓 Виберіть курс</h1>
-    <div class="grid-container" id="catalog">
-      <p>Завантаження...</p>
-    </div>
+    <button class="cart-button">🛒 Кошик</button>
+  </div>
+  <div class="grid-container" id="catalog">
+    <p>Завантаження...</p>
   </div>
   <script>
-    // Отримання параметрів URL
     function getQueryParams() {
       const params = {};
       const queryString = window.location.search.substring(1);
@@ -136,16 +165,11 @@
           return;
         }
 
-        // Отримуємо збережені дані користувача
-        const user = getUserData();
-
         data.values.slice(1).forEach(row => {
           const courseName = row[0];
           const courseShort = row[1];
           const imagePath = `../../webapp/img/courses/${courseShort}.jpg`;
           const link = document.createElement("a");
-
-          // Передаємо ім'я, телефон та id як параметри до products.html
           link.href = `../../webapp/order/products.html?course=${courseShort}`;
           link.className = "course-button";
           
