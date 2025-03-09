@@ -28,6 +28,19 @@
       font-weight: bold;
       text-align: center;
     }
+    .back-link {
+      text-decoration: none;
+      color: #007bff;
+      font-size: 18px;
+      display: inline-block;
+      cursor: pointer;
+      border: none;
+      background: none;
+      padding: 0;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
     .btn {
       background: linear-gradient(to bottom, #9b59b6, #8e44ad);
       border-radius: 20px;
@@ -73,7 +86,7 @@
 <body>
   <div class="cart-container">
     <div class="header-container">
-      <button class="btn" onclick="goBack()">🔙 Повернутися назад</button>
+      <button class="back-link" onclick="goBack()">🔙 Повернутися до курсів HD</button>
       <h1 class="header-title">🛒 Ваша корзина</h1>
     </div>
     <div id="cart-items">Завантаження...</div>
