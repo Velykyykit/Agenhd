@@ -65,14 +65,14 @@
       font-size: 18px;
     }
     .cart-item .quantity-container {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       background: linear-gradient(to bottom, #9b59b6, #8e44ad);
       border-radius: 20px;
       padding: 2px 6px;
       box-shadow: inset 0 0 1px #fff, 0 2px 3px rgba(0,0,0,0.2);
     }
-    .cart-item button {
+    .cart-item .quantity-container button {
       background: transparent;
       border: none;
       color: #fff;
@@ -85,11 +85,11 @@
       border-radius: 50%;
       transition: background-color 0.3s, transform 0.2s;
     }
-    .cart-item button:hover {
+    .cart-item .quantity-container button:hover {
       background-color: rgba(255,255,255,0.2);
       transform: scale(1.1);
     }
-    .cart-item input {
+    .cart-item .quantity-container input {
       width: 40px;
       text-align: center;
       font-size: 16px;
@@ -99,8 +99,12 @@
       background: #fff;
       color: #000;
     }
-    .cart-item input:focus {
-      outline: 2px solid #ddd;
+    .cart-item button.remove-btn {
+      background: none;
+      border: none;
+      color: red;
+      font-size: 18px;
+      cursor: pointer;
     }
     .cart-actions {
       margin-top: 20px;
@@ -151,30 +155,45 @@
         div.innerHTML = `
           <span>${item.name}</span>
           <div class="quantity-container">
-            <button onclick="updateQuantity(${index}, -1)">–</button>
-            <input type="number" value="${item.quantity}" min="0" onchange="updateQuantity(${index}, 0, this.value)">
-            <button onclick="updateQuantity(${index}, 1)">+</button>
+            <button onclick="updateQuantity('${item.id}', -1)">–</button>
+            <input type="number" value="${item.quantity}" min="1" data-id="${item.id}" onchange="updateQuantity('${item.id}', 0, this.value)">
+            <button onclick="updateQuantity('${item.id}', 1)">+</button>
           </div>
+          <button class="remove-btn" onclick="removeFromCart('${item.id}')">❌</button>
         `;
         cartContainer.appendChild(div);
       });
     }
 
-    function updateQuantity(index, change, customValue = null) {
+    function updateQuantity(productId, change, setValue = null) {
       let cart = getCart();
+      let item = cart.find(i => i.id === productId);
 
-      if (customValue !== null) {
-        cart[index].quantity = Math.max(0, parseInt(customValue) || 0);
-      } else {
-        cart[index].quantity = Math.max(0, cart[index].quantity + change);
-      }
-
-      if (cart[index].quantity === 0) {
-        cart.splice(index, 1);
+      if (item) {
+        if (setValue !== null) {
+          item.quantity = parseInt(setValue) || 1;
+        } else {
+          item.quantity = Math.max(1, item.quantity + change);
+        }
       }
 
       saveCart(cart);
       loadCart();
+      syncWithProducts();
+    }
+
+    function removeFromCart(productId) {
+      let cart = getCart();
+      cart = cart.filter(item => item.id !== productId);
+      saveCart(cart);
+      loadCart();
+      syncWithProducts();
+    }
+
+    function syncWithProducts() {
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage({ type: "syncCart", cart: getCart() }, "*");
+      }
     }
 
     function checkout() {
@@ -188,11 +207,19 @@
       alert("✅ Ваше замовлення оформлено!");
       localStorage.removeItem("cart");
       loadCart();
+      syncWithProducts();
     }
 
     function goBack() {
-      window.history.back();
+      window.location.href = "order.html";
     }
+
+    window.addEventListener("message", (event) => {
+      if (event.data.type === "syncCart") {
+        saveCart(event.data.cart);
+        loadCart();
+      }
+    });
 
     loadCart();
   </script>
