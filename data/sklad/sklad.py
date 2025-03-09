@@ -27,12 +27,16 @@ FONT_PATH = os.path.join("/app/config/fonts", "DejaVuSans.ttf")
 async def get_sklad_menu(user_data: dict):
     """
     Формує меню для розділу складу.
-    URL WebApp отримує query-параметри з ім'ям та телефоном користувача.
+    URL WebApp отримує query-параметри з ім'ям, телефоном та ID користувача.
     """
     user_name = user_data.get("name", "незнайомий")
     user_phone = user_data.get("phone", "не вказано")
     user_id = user_data.get("tg_id", "")
-    params = urlencode({"name": user_name, "id": "user_id", "phone": user_phone})
+    params = urlencode({
+        "name": user_name,
+        "phone": user_phone,
+        "id": user_id
+    })
     url = f"https://velykyykit.github.io/Agenhd/webapp/order/order.html?{params}"
     
     return InlineKeyboardMarkup(inline_keyboard=[
