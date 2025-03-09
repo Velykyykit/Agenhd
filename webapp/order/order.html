@@ -91,7 +91,7 @@
   </div>
   <div class="header-container">
     <h1 class="header-title">🎓 Виберіть курс</h1>
-    <button class="cart-button">🛒 Корзина</button>
+    <button class="cart-button" onclick="openCart()">🛒 Корзина (<span id="cart-count">0</span>)</button>
   </div>
   <div class="grid-container" id="catalog">
     <p>Завантаження...</p>
@@ -131,6 +131,15 @@
       document.getElementById("user-info").textContent = `👤 Користувач: ${user.name} | 📞 Телефон: ${user.phone} | 🆔 ID: ${user.id}`;
     }
 
+    function updateCartCount() {
+      const cart = JSON.parse(localStorage.getItem("cart")) || [];
+      document.getElementById("cart-count").textContent = cart.length;
+    }
+
+    function openCart() {
+      window.location.href = "cart.html";
+    }
+
     async function loadConfig() {
       try {
         const response = await fetch("../../config.js");
@@ -146,44 +155,8 @@
       }
     }
 
-    async function fetchCourses(sheetId, apiKey) {
-      const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/dictionary?key=${apiKey}`;
-      try {
-        const response = await fetch(apiUrl);
-        if (!response.ok) throw new Error("Не вдалося отримати дані з Google Sheets");
-        const data = await response.json();
-        const catalogDiv = document.getElementById("catalog");
-        catalogDiv.innerHTML = "";
-
-        if (!data.values || data.values.length === 0) {
-          catalogDiv.innerHTML = "<p>Немає даних у таблиці</p>";
-          return;
-        }
-
-        data.values.slice(1).forEach(row => {
-          const courseName = row[0];
-          const courseShort = row[1];
-          const imagePath = `../../webapp/img/courses/${courseShort}.jpg`;
-          const link = document.createElement("a");
-          link.href = `../../webapp/order/products.html?course=${courseShort}`;
-          link.className = "course-button";
-          
-          const img = new Image();
-          img.src = imagePath;
-          img.onload = () => {
-            link.innerHTML = `<img src="${imagePath}" alt="${courseName}" loading="lazy">`;
-          };
-          img.onerror = () => {
-            link.innerHTML = `${courseName} 📚`;
-          };
-          catalogDiv.appendChild(link);
-        });
-      } catch (error) {
-        console.error("Помилка отримання каталогу:", error);
-      }
-    }
-
     displayUserInfo();
+    updateCartCount();
     loadConfig();
   </script>
   <script src="../../config.js"></script>
