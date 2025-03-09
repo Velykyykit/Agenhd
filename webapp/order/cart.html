@@ -16,14 +16,32 @@
       margin: 0 auto;
       text-align: center;
     }
-    .cart-header {
+    .header-container {
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
+      gap: 20px;
       margin-bottom: 20px;
     }
-    h1 {
+    .header-title {
       font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+    }
+    .btn {
+      background: linear-gradient(to bottom, #9b59b6, #8e44ad);
+      border-radius: 20px;
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      padding: 12px 24px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    .btn:hover {
+      background-color: rgba(255,255,255,0.2);
+      transform: scale(1.05);
     }
     .cart-item {
       display: flex;
@@ -46,21 +64,6 @@
       justify-content: center;
       gap: 15px;
     }
-    .btn {
-      background: linear-gradient(to bottom, #9b59b6, #8e44ad);
-      border-radius: 20px;
-      border: none;
-      color: #fff;
-      font-size: 16px;
-      padding: 12px 24px;
-      cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      transition: background-color 0.3s, transform 0.2s;
-    }
-    .btn:hover {
-      background-color: rgba(255,255,255,0.2);
-      transform: scale(1.05);
-    }
     .empty-cart {
       font-size: 18px;
       color: #666;
@@ -69,9 +72,9 @@
 </head>
 <body>
   <div class="cart-container">
-    <div class="cart-header">
-      <h1>🛒 Ваша корзина</h1>
-      <button class="btn" onclick="goToCourses()">🔙 Повернутися до курсів HD</button>
+    <div class="header-container">
+      <button class="btn" onclick="goBack()">🔙 Повернутися назад</button>
+      <h1 class="header-title">🛒 Ваша корзина</h1>
     </div>
     <div id="cart-items">Завантаження...</div>
     <div class="cart-actions">
@@ -121,8 +124,8 @@
       loadCart();
     }
 
-    function goToCourses() {
-      window.location.href = "order.html";
+    function goBack() {
+      window.history.back();
     }
 
     loadCart();
