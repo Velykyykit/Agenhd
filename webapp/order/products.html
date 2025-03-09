@@ -158,7 +158,8 @@
 
     function updateCartCount() {
       const cart = getCart();
-      document.getElementById("cart-count").textContent = cart.length;
+      let totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+      document.getElementById("cart-count").textContent = totalItems;
     }
 
     function openCart() {
@@ -232,15 +233,7 @@
           const li = document.createElement("li");
           li.dataset.productId = row[0];
           li.dataset.productName = row[2];
-
-          const rowContainer = document.createElement("div");
-          rowContainer.className = "row-container";
-
-          const productInfo = document.createElement("div");
-          productInfo.innerHTML = `<strong>${row[2]}</strong> – ${row[5]} грн`;
-
-          rowContainer.appendChild(productInfo);
-          li.appendChild(rowContainer);
+          li.innerHTML = `<strong>${row[2]}</strong> – ${row[5]} грн`;
           list.appendChild(li);
         });
 
