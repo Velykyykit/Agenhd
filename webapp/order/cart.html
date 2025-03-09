@@ -64,12 +64,47 @@
       border-bottom: 1px solid #ccc;
       font-size: 18px;
     }
+    .cart-item .quantity-container {
+      display: inline-flex;
+      align-items: center;
+      background: linear-gradient(to bottom, #9b59b6, #8e44ad);
+      border-radius: 20px;
+      padding: 2px 6px;
+      box-shadow: inset 0 0 1px #fff, 0 2px 3px rgba(0,0,0,0.2);
+    }
     .cart-item button {
       background: none;
       border: none;
       color: red;
       font-size: 18px;
       cursor: pointer;
+    }
+    .cart-item .quantity-container button {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 18px;
+      width: 30px;
+      height: 30px;
+      line-height: 30px;
+      text-align: center;
+      cursor: pointer;
+      border-radius: 50%;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    .cart-item .quantity-container button:hover {
+      background-color: rgba(255,255,255,0.2);
+      transform: scale(1.1);
+    }
+    .cart-item .quantity-container input {
+      width: 40px;
+      text-align: center;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      margin: 0 5px;
+      background: #fff;
+      color: #000;
     }
     .cart-actions {
       margin-top: 20px;
@@ -96,8 +131,16 @@
   </div>
 
   <script>
+    function getCart() {
+      return JSON.parse(localStorage.getItem("cart")) || [];
+    }
+
+    function saveCart(cart) {
+      localStorage.setItem("cart", JSON.stringify(cart));
+    }
+
     function loadCart() {
-      const cart = JSON.parse(localStorage.getItem("cart")) || [];
+      const cart = getCart();
       const cartContainer = document.getElementById("cart-items");
       cartContainer.innerHTML = "";
 
@@ -110,22 +153,37 @@
         const div = document.createElement("div");
         div.className = "cart-item";
         div.innerHTML = `
-          <span>${item.name} (${item.quantity})</span>
+          <span>${item.name}</span>
+          <div class="quantity-container">
+            <button onclick="updateQuantity(${index}, -1)">–</button>
+            <input type="number" value="${item.quantity}" min="1" readonly>
+            <button onclick="updateQuantity(${index}, 1)">+</button>
+          </div>
           <button onclick="removeFromCart(${index})">❌</button>
         `;
         cartContainer.appendChild(div);
       });
     }
 
+    function updateQuantity(index, change) {
+      let cart = getCart();
+      cart[index].quantity += change;
+      if (cart[index].quantity <= 0) {
+        cart.splice(index, 1);
+      }
+      saveCart(cart);
+      loadCart();
+    }
+
     function removeFromCart(index) {
-      let cart = JSON.parse(localStorage.getItem("cart"));
+      let cart = getCart();
       cart.splice(index, 1);
-      localStorage.setItem("cart", JSON.stringify(cart));
+      saveCart(cart);
       loadCart();
     }
 
     function checkout() {
-      const cart = JSON.parse(localStorage.getItem("cart")) || [];
+      const cart = getCart();
 
       if (cart.length === 0) {
         alert("❌ Корзина порожня! Додайте товари перед оформленням замовлення.");
@@ -138,7 +196,7 @@
     }
 
     function goBack() {
-      window.history.back();
+      window.location.href = "order.html";
     }
 
     loadCart();
