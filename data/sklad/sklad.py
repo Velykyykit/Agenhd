@@ -31,7 +31,8 @@ async def get_sklad_menu(user_data: dict):
     """
     user_name = user_data.get("name", "незнайомий")
     user_phone = user_data.get("phone", "не вказано")
-    params = urlencode({"name": user_name, "phone": user_phone})
+    user_id = user_data.get("tg_id", "")
+    params = urlencode({"name": user_name, "id": "user_id", "phone": user_phone})
     url = f"https://velykyykit.github.io/Agenhd/webapp/order/order.html?{params}"
     
     return InlineKeyboardMarkup(inline_keyboard=[
