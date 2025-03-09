@@ -16,7 +16,8 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from config.auth import AuthManager
 
 # Логіка складу
-from data.sklad.sklad import handle_sklad, show_all_stock
+from data.sklad.skald import handle_sklad, show_all_stock  # Якщо назва модуля "sklad.py", залиште "sklad"
+# (Переконайтеся, що ім'я правильне)
 
 # Клавіатури
 from menu.keyboards import get_phone_keyboard, get_restart_keyboard
@@ -38,7 +39,6 @@ CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE")
 if not TOKEN or not SHEET_ID or not SHEET_SKLAD or not CREDENTIALS_FILE:
     raise ValueError("❌ Не знайдено змінні середовища!")
 
-# Перетворення JSON-рядка у Python-словник
 try:
     CREDENTIALS_JSON = json.loads(CREDENTIALS_FILE)
 except json.JSONDecodeError as e:
@@ -82,12 +82,12 @@ async def handle_contact(message: types.Message):
     logging.info(f"[DEBUG] Отримано номер: {phone_number}")
 
     try:
-        # Перевірка користувача в базі
         user_data = await auth_manager.check_user_in_database(phone_number)
         logging.info(f"[DEBUG] Відповідь від auth.py: {user_data}")
         if user_data:
-            # Додаємо телефон до user_data, щоб зберегти його для WebApp
+            # Додаємо телефон та Telegram ID до user_data
             user_data["phone"] = phone_number
+            user_data["tg_id"] = message.from_user.id
 
             # Зберігаємо дані користувача в глобальному словнику
             USER_DATA[message.from_user.id] = user_data
@@ -109,10 +109,10 @@ async def handle_contact(message: types.Message):
 async def handle_sklad_call(call: types.CallbackQuery):
     """Обробник натискання кнопки '📦 Склад'."""
     await call.answer()
-    # Отримуємо дані користувача з глобального словника; якщо їх немає, використовуємо значення за замовчуванням.
     user_data = USER_DATA.get(call.from_user.id, {
         "name": call.from_user.first_name, 
-        "phone": "не вказано"
+        "phone": "не вказано",
+        "tg_id": call.from_user.id
     })
     await handle_sklad(call.message, user_data)
 
