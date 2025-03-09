@@ -16,28 +16,23 @@
       max-width: 700px;
       margin: 0 auto;
       text-align: center;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
     }
     #user-info {
       margin-bottom: 15px;
       font-size: 16px;
       font-weight: bold;
-      flex: 1;
-      text-align: left;
     }
     .header-container {
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
-      width: 100%;
-    }
-    h1 {
+      gap: 20px;
       margin-bottom: 20px;
+    }
+    .header-title {
       font-size: 24px;
-      text-align: left;
-      flex: 1;
+      font-weight: bold;
+      text-align: center;
     }
     .cart-button {
       background: linear-gradient(to bottom, #9b59b6, #8e44ad);
@@ -95,7 +90,7 @@
     <div id="user-info">Завантаження даних користувача...</div>
   </div>
   <div class="header-container">
-    <h1>🎓 Виберіть курс</h1>
+    <h1 class="header-title">🎓 Виберіть курс</h1>
     <button class="cart-button">🛒 Корзина</button>
   </div>
   <div class="grid-container" id="catalog">
