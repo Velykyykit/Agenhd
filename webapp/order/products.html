@@ -192,19 +192,27 @@
 
           const qtyContainer = document.createElement("div");
           qtyContainer.className = "quantity-container";
-          
+
+          const minusButton = document.createElement("button");
+          minusButton.textContent = "–";
+
           const quantityInput = document.createElement("input");
           quantityInput.type = "number";
           quantityInput.value = getCart().find(item => item.id === row[0])?.quantity || "0";
           quantityInput.min = "0";
 
-          qtyContainer.appendChild(quantityInput);
-          rowContainer.appendChild(productInfo);
-          rowContainer.appendChild(qtyContainer);
-          li.appendChild(rowContainer);
-          list.appendChild(li);
+          const plusButton = document.createElement("button");
+          plusButton.textContent = "+";
+
+          minusButton.onclick = () => quantityInput.value = Math.max(0, quantityInput.value - 1);
+          plusButton.onclick = () => quantityInput.value = Number(quantityInput.value) + 1;
+
+          qtyContainer.append(minusButton, quantityInput, plusButton);
+          rowContainer.append(productInfo, qtyContainer);
+          li.append(rowContainer);
+          list.append(li);
         });
-        
+
         productsDiv.appendChild(list);
       } catch (error) {
         console.error("Помилка отримання даних:", error);
