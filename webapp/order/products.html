@@ -154,19 +154,24 @@
         let productId = li.dataset.productId;
         let productName = li.dataset.productName;
         let quantity = parseInt(li.querySelector("input").value) || 0;
+        let index = cart.findIndex(item => item.id === productId);
 
         if (quantity > 0) {
-          let existingItem = cart.find(item => item.id === productId);
-          if (existingItem) {
-            existingItem.quantity = quantity;
+          if (index !== -1) {
+            cart[index].quantity = quantity;
           } else {
             cart.push({ id: productId, name: productName, quantity });
+          }
+        } else {
+          // Якщо кількість 0, видаляємо товар з корзини, якщо він там є
+          if (index !== -1) {
+            cart.splice(index, 1);
           }
         }
       });
 
       saveCart(cart);
-      alert("🛒 Вибрані товари додані у корзину!");
+      alert("🛒 Корзина оновлена!");
     }
 
     function openCart() {
