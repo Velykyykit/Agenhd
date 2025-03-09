@@ -16,9 +16,14 @@
       margin: 0 auto;
       text-align: center;
     }
+    .cart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
     h1 {
       font-size: 24px;
-      margin-bottom: 20px;
     }
     .cart-item {
       display: flex;
@@ -37,8 +42,11 @@
     }
     .cart-actions {
       margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 15px;
     }
-    .checkout-btn {
+    .btn {
       background: linear-gradient(to bottom, #9b59b6, #8e44ad);
       border-radius: 20px;
       border: none;
@@ -49,7 +57,7 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
       transition: background-color 0.3s, transform 0.2s;
     }
-    .checkout-btn:hover {
+    .btn:hover {
       background-color: rgba(255,255,255,0.2);
       transform: scale(1.05);
     }
@@ -61,10 +69,13 @@
 </head>
 <body>
   <div class="cart-container">
-    <h1>🛒 Ваша корзина</h1>
+    <div class="cart-header">
+      <h1>🛒 Ваша корзина</h1>
+      <button class="btn" onclick="goToCourses()">🔙 Повернутися до курсів HD</button>
+    </div>
     <div id="cart-items">Завантаження...</div>
     <div class="cart-actions">
-      <button class="checkout-btn" onclick="checkout()">✅ Оформити замовлення</button>
+      <button class="btn" onclick="checkout()">✅ Оформити замовлення</button>
     </div>
   </div>
 
@@ -108,6 +119,10 @@
       alert("✅ Ваше замовлення оформлено!");
       localStorage.removeItem("cart");
       loadCart();
+    }
+
+    function goToCourses() {
+      window.location.href = "order.html";
     }
 
     loadCart();
