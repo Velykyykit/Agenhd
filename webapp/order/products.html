@@ -183,43 +183,22 @@
           const li = document.createElement("li");
           li.dataset.productId = row[0];
           li.dataset.productName = row[2];
-          
+
           const rowContainer = document.createElement("div");
           rowContainer.className = "row-container";
           
           const productInfo = document.createElement("div");
           productInfo.innerHTML = `<strong>${row[2]}</strong> – ${row[5]} грн`;
-          
+
           const qtyContainer = document.createElement("div");
           qtyContainer.className = "quantity-container";
           
-          const minusButton = document.createElement("button");
-          minusButton.textContent = "–";
-          
           const quantityInput = document.createElement("input");
           quantityInput.type = "number";
-          quantityInput.value = "0";
+          quantityInput.value = getCart().find(item => item.id === row[0])?.quantity || "0";
           quantityInput.min = "0";
-          
-          const plusButton = document.createElement("button");
-          plusButton.textContent = "+";
-          
-          minusButton.addEventListener("click", () => {
-            let current = parseInt(quantityInput.value) || 0;
-            if (current > 0) {
-              quantityInput.value = current - 1;
-            }
-          });
 
-          plusButton.addEventListener("click", () => {
-            let current = parseInt(quantityInput.value) || 0;
-            quantityInput.value = current + 1;
-          });
-
-          qtyContainer.appendChild(minusButton);
           qtyContainer.appendChild(quantityInput);
-          qtyContainer.appendChild(plusButton);
-          
           rowContainer.appendChild(productInfo);
           rowContainer.appendChild(qtyContainer);
           li.appendChild(rowContainer);
@@ -232,18 +211,6 @@
       }
     }
 
-    function addAllToCart() {
-      let cart = getCart();
-      document.querySelectorAll("li").forEach(li => {
-        let quantity = parseInt(li.querySelector("input").value) || 0;
-        if (quantity > 0) {
-          cart.push({ id: li.dataset.productId, name: li.dataset.productName, quantity });
-        }
-      });
-      saveCart(cart);
-      alert("🛒 Всі вибрані товари додано у корзину!");
-    }
-    
     loadConfig();
   </script>
 </body>
