@@ -108,7 +108,7 @@
 </head>
 <body>
   <div class="container">
-    <a href="order.html" class="back-link">🔙 Назад до курсів</a>
+    <a href="order.html" class="back-link">🔙 Повернутися до курсів HD</a>
     <h1>Товари</h1>
     <div id="products" class="product-list">Завантаження...</div>
   </div>
@@ -226,16 +226,22 @@
             quantityInput.value = current + 1;
           });
 
+          const addToCartBtn = document.createElement("button");
+          addToCartBtn.className = "add-to-cart";
+          addToCartBtn.textContent = "Додати у корзину";
+          addToCartBtn.onclick = () => addToCart(row[0], row[2], parseInt(quantityInput.value) || 0);
+
           qtyContainer.appendChild(minusButton);
           qtyContainer.appendChild(quantityInput);
           qtyContainer.appendChild(plusButton);
-          
+
           rowContainer.appendChild(productInfo);
           rowContainer.appendChild(qtyContainer);
           li.appendChild(rowContainer);
+          li.appendChild(addToCartBtn);
           list.appendChild(li);
         });
-        
+
         productsDiv.appendChild(list);
       } catch (error) {
         console.error("Помилка отримання даних:", error);
