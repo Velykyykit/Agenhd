@@ -31,11 +31,12 @@ async def get_sklad_menu(user_data: dict):
     """
     user_name = user_data.get("name", "незнайомий")
     user_phone = user_data.get("phone", "не вказано")
-    user_id = user_data.get("tg_id", "")
+    user_id = user_data.get("id", "невідомо")  # Тепер отримуємо ID з бази
+
     params = urlencode({
         "name": user_name,
         "phone": user_phone,
-        "id": user_id
+        "id": user_id  # Передаємо ID користувача
     })
     url = f"https://velykyykit.github.io/Agenhd/webapp/order/order.html?{params}"
     
