@@ -44,13 +44,11 @@
       padding-bottom: 10px;
       border-bottom: 1px solid #ccc;
     }
-    /* Контейнер для розміщення назви товару та кнопок в одному рядку */
     .row-container {
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    /* Контейнер для кнопок і поля введення (фіолетовий дизайн) */
     .quantity-container {
       display: inline-flex;
       align-items: center;
@@ -89,7 +87,6 @@
     .quantity-container input:focus {
       outline: 2px solid #ddd;
     }
-    /* Кнопка "Додати у корзину" */
     .add-to-cart {
       display: block;
       margin: 20px auto 0;
@@ -111,21 +108,33 @@
 </head>
 <body>
   <div class="container">
-    <!-- Посилання повертає на order.html -->
     <a href="order.html" class="back-link">🔙 Назад до курсів</a>
     <h1>Товари</h1>
     <div id="products" class="product-list">Завантаження...</div>
   </div>
   <script>
-    // Ініціалізуємо тимчасове сховище для корзини
-    window.cart = [];
-
-    // Функція-заглушка для оновлення таблиці замовлень (SHEET_ORDER) – для майбутнього функціоналу
-    function updateOrderSheet(orderData) {
-      console.log("Оновлення таблиці замовлень SHEET_ORDER з даними:", orderData);
-      alert("Дані для оновлення замовлень відправлено (stub).");
+    function getCart() {
+      return JSON.parse(localStorage.getItem("cart")) || [];
     }
-    
+
+    function saveCart(cart) {
+      localStorage.setItem("cart", JSON.stringify(cart));
+    }
+
+    function addToCart(productId, productName, quantity) {
+      let cart = getCart();
+      const existingItem = cart.find(item => item.id === productId);
+
+      if (existingItem) {
+        existingItem.quantity += quantity;
+      } else {
+        cart.push({ id: productId, name: productName, quantity });
+      }
+
+      saveCart(cart);
+      alert(`🛒 ${productName} додано у корзину!`);
+    }
+
     async function loadConfig() {
       try {
         const response = await fetch("../../config.js");
@@ -135,8 +144,6 @@
         await new Promise(resolve => script.onload = resolve);
         const SHEET_SKLAD = window.CONFIG.SHEET_SKLAD;
         const GOOGLE_API_KEY = window.CONFIG.GOOGLE_API_KEY;
-        // Зберігаємо SHEET_ORDER для подальшої роботи
-        window.SHEET_ORDER = window.CONFIG.SHEET_ORDER;
         fetchProducts(SHEET_SKLAD, GOOGLE_API_KEY);
       } catch (error) {
         console.error("Помилка завантаження конфігурації:", error);
@@ -152,7 +159,6 @@
       }
       
       try {
-        // Завантажуємо таблицю "dictionary" для отримання повної назви курсу
         const dictUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/dictionary?key=${apiKey}`;
         const dictResp = await fetch(dictUrl);
         const dictData = await dictResp.json();
@@ -162,13 +168,11 @@
           document.getElementById("products").innerHTML = `<p>Не знайдено курс із короткою назвою: ${courseShort}</p>`;
           return;
         }
-        // Використовуємо повну назву курсу (row[0])
+
         const fullCourseName = courseRow[0];
-        
         const productsDiv = document.getElementById("products");
         productsDiv.innerHTML = `<h2>Товари для курсу: ${fullCourseName}</h2>`;
         
-        // Завантажуємо лист "SKLAD" з товарами
         const skladUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/SKLAD?key=${apiKey}`;
         const skladResp = await fetch(skladUrl);
         const skladData = await skladResp.json();
@@ -178,7 +182,6 @@
           return;
         }
         
-        // Фільтруємо товари, де row[1] == courseShort
         const products = skladData.values.slice(1).filter(row => row[1] === courseShort);
         if (products.length === 0) {
           productsDiv.innerHTML += "<p>Немає товарів для цього курсу.</p>";
@@ -187,9 +190,7 @@
         
         const list = document.createElement("ul");
         products.forEach(row => {
-          // Припускаємо: row[0] - id товару, row[2] - назва товару, row[5] - ціна
           const li = document.createElement("li");
-          // Зберігаємо id та назву як data-атрибути для подальшого використання
           li.dataset.productId = row[0];
           li.dataset.productName = row[2];
           
@@ -219,52 +220,23 @@
               quantityInput.value = current - 1;
             }
           });
+
           plusButton.addEventListener("click", () => {
             let current = parseInt(quantityInput.value) || 0;
             quantityInput.value = current + 1;
           });
-          
+
           qtyContainer.appendChild(minusButton);
           qtyContainer.appendChild(quantityInput);
           qtyContainer.appendChild(plusButton);
           
           rowContainer.appendChild(productInfo);
           rowContainer.appendChild(qtyContainer);
-          
           li.appendChild(rowContainer);
           list.appendChild(li);
         });
         
         productsDiv.appendChild(list);
-        
-        // Додаємо кнопку "Додати у корзину" внизу списку
-        const addToCartBtn = document.createElement("button");
-        addToCartBtn.className = "add-to-cart";
-        addToCartBtn.textContent = "Додати у корзину";
-        
-        addToCartBtn.addEventListener("click", () => {
-          // Для кожного товару зі списку перевіряємо введену кількість і, якщо > 0, додаємо до корзини
-          const items = list.querySelectorAll("li");
-          items.forEach(li => {
-            const qtyInput = li.querySelector("input");
-            const quantity = parseInt(qtyInput.value) || 0;
-            if (quantity > 0) {
-              const productId = li.dataset.productId;
-              const productName = li.dataset.productName;
-              // Додаємо в глобальне тимчасове сховище (масив window.cart)
-              window.cart.push({
-                id: productId,
-                name: productName,
-                quantity: quantity
-              });
-            }
-          });
-          console.log("Корзина:", window.cart);
-          updateOrderSheet(window.cart);
-        });
-        
-        productsDiv.appendChild(addToCartBtn);
-        
       } catch (error) {
         console.error("Помилка отримання даних:", error);
       }
