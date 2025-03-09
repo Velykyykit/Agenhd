@@ -82,7 +82,7 @@
 <body>
   <div class="container">
     <!-- Відображення інформації про користувача -->
-    <div id="user-info">Користувач: незнайомий, Телефон: незнайомий</div>
+    <div id="user-info">Користувач: незнайомий, Телефон: незнайомий, ID:</div>
     <h1>🎓 Виберіть курс</h1>
     <div class="grid-container" id="catalog">
       <p>Завантаження...</p>
@@ -97,8 +97,6 @@
       pairs.forEach(pair => {
         const [key, value] = pair.split("=");
         if (key) {
-          // 1) decodeURIComponent - декодує %XX
-          // 2) .replace(/\+/g, " ") - замінює "+" на пробіли
           params[key] = decodeURIComponent(value || "").replace(/\+/g, " ");
         }
       });
@@ -107,12 +105,12 @@
     
     function displayUserInfo() {
       const params = getQueryParams();
-      // Припускаємо, що дані передаються як name та phone
+      // Припускаємо, що дані передаються як name, phone та id
       const name = params.name || "незнайомий";
       const phone = params.phone || "незнайомий";
       const id = params.id || "";
       const userInfoDiv = document.getElementById("user-info");
-      userInfoDiv.textContent = ID: ${id}`, Вітаю:  ${name}, Ваш телефон: ${phone}`;
+      userInfoDiv.textContent = `ID: ${id}, Вітаю: ${name}, Ваш телефон: ${phone}`;
     }
     
     async function loadConfig() {
@@ -142,19 +140,19 @@
           catalogDiv.innerHTML = "<p>Немає даних у таблиці</p>";
           return;
         }
-        // Зчитуємо name та phone, щоб передавати далі у products.html
+        // Зчитуємо name, phone та id, щоб передавати далі у products.html
         const params = getQueryParams();
         const userName = params.name || "";
         const userPhone = params.phone || "";
-        const userPhone = params.phone || "";
+        const userId = params.id || "";
         data.values.slice(1).forEach(row => {
           const courseName = row[0];
           const courseShort = row[1];
           const imagePath = `../../webapp/img/courses/${courseShort}.jpg`;
           const link = document.createElement("a");
           
-          // Передаємо ім'я та телефон як параметри products.html
-          link.href = `../../webapp/order/products.html?course=${encodeURIComponent(courseShort)}&name=${encodeURIComponent(userName)}&phone=${encodeURIComponent(userPhone)}`;
+          // Передаємо ім'я, телефон та id як параметри до products.html
+          link.href = `../../webapp/order/products.html?course=${encodeURIComponent(courseShort)}&name=${encodeURIComponent(userName)}&phone=${encodeURIComponent(userPhone)}&id=${encodeURIComponent(userId)}`;
           link.className = "course-button";
           
           const img = new Image();
@@ -172,9 +170,7 @@
       }
     }
     
-    // Спочатку відображаємо інформацію про користувача
     displayUserInfo();
-    // Потім завантажуємо конфіг і список курсів
     loadConfig();
   </script>
   <script src="../../config.js"></script>
