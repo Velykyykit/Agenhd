@@ -60,36 +60,19 @@
     .course-button:hover {
       background: #ddd;
     }
-    @media (max-width: 500px) {
-      .grid-container {
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      }
-      .course-button {
-        font-size: 14px;
-        max-width: 150px;
-      }
-    }
-    @media (min-width: 501px) and (max-width: 1024px) {
-      .grid-container {
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      }
-      .course-button {
-        max-width: 200px;
-      }
-    }
   </style>
 </head>
 <body>
   <div class="container">
     <!-- Відображення інформації про користувача -->
-    <div id="user-info">Користувач: незнайомий, Телефон: незнайомий, ID:</div>
+    <div id="user-info">Завантаження даних користувача...</div>
     <h1>🎓 Виберіть курс</h1>
     <div class="grid-container" id="catalog">
       <p>Завантаження...</p>
     </div>
   </div>
   <script>
-    // Функція для отримання параметрів URL з додатковою заміною "+" на пробіли
+    // Функція для отримання параметрів URL та декодування значень
     function getQueryParams() {
       const params = {};
       const queryString = window.location.search.substring(1);
@@ -105,12 +88,12 @@
     
     function displayUserInfo() {
       const params = getQueryParams();
-      // Припускаємо, що дані передаються як name, phone та id
       const name = params.name || "незнайомий";
       const phone = params.phone || "незнайомий";
-      const id = params.id || "";
+      const id = params.id || "невідомо";
+
       const userInfoDiv = document.getElementById("user-info");
-      userInfoDiv.textContent = `ID: ${id}, Вітаю: ${name}, Ваш телефон: ${phone}`;
+      userInfoDiv.textContent = `👤 Користувач: ${name} | 📞 Телефон: ${phone} | 🆔 ID: ${id}`;
     }
     
     async function loadConfig() {
@@ -136,23 +119,26 @@
         const data = await response.json();
         const catalogDiv = document.getElementById("catalog");
         catalogDiv.innerHTML = "";
+
         if (!data.values || data.values.length === 0) {
           catalogDiv.innerHTML = "<p>Немає даних у таблиці</p>";
           return;
         }
+
         // Зчитуємо name, phone та id, щоб передавати далі у products.html
         const params = getQueryParams();
-        const userName = params.name || "";
-        const userPhone = params.phone || "";
-        const userId = params.id || "";
+        const userName = encodeURIComponent(params.name || "");
+        const userPhone = encodeURIComponent(params.phone || "");
+        const userId = encodeURIComponent(params.id || "");
+
         data.values.slice(1).forEach(row => {
           const courseName = row[0];
           const courseShort = row[1];
           const imagePath = `../../webapp/img/courses/${courseShort}.jpg`;
           const link = document.createElement("a");
-          
+
           // Передаємо ім'я, телефон та id як параметри до products.html
-          link.href = `../../webapp/order/products.html?course=${encodeURIComponent(courseShort)}&name=${encodeURIComponent(userName)}&phone=${encodeURIComponent(userPhone)}&id=${encodeURIComponent(userId)}`;
+          link.href = `../../webapp/order/products.html?course=${courseShort}&name=${userName}&phone=${userPhone}&id=${userId}`;
           link.className = "course-button";
           
           const img = new Image();
