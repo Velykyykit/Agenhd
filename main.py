@@ -16,7 +16,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from config.auth import AuthManager
 
 # Логіка складу
-from data.sklad.skald import handle_sklad, show_all_stock  # Якщо назва модуля "sklad.py", залиште "sklad"
+from data.sklad.sklad import handle_sklad, show_all_stock  # Якщо назва модуля "sklad.py", залиште "sklad"
 # (Переконайтеся, що ім'я правильне)
 
 # Клавіатури
