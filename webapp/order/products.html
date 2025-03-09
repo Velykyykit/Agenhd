@@ -26,8 +26,11 @@
       text-decoration: none;
       color: #007bff;
       font-size: 18px;
-      display: block;
+      display: inline-block;
       margin-bottom: 15px;
+    }
+    .back-link:hover {
+      text-decoration: underline;
     }
     .product-list {
       background: #fff;
@@ -87,7 +90,7 @@
     .quantity-container input:focus {
       outline: 2px solid #ddd;
     }
-    .add-to-cart {
+    .add-all-to-cart {
       display: block;
       margin: 20px auto 0;
       padding: 10px 20px;
@@ -100,7 +103,7 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
       transition: background-color 0.3s, transform 0.2s;
     }
-    .add-to-cart:hover {
+    .add-all-to-cart:hover {
       background-color: rgba(255,255,255,0.2);
       transform: scale(1.05);
     }
@@ -108,9 +111,10 @@
 </head>
 <body>
   <div class="container">
-    <a href="order.html" class="back-link">🔙 Повернутися до курсів HD</a>
+    <a href="order.html" class="back-link">🔙 Назад до курсів</a>
     <h1>Товари</h1>
     <div id="products" class="product-list">Завантаження...</div>
+    <button class="add-all-to-cart" onclick="addAllToCart()">🛒 Додати у корзину</button>
   </div>
   <script>
     function getCart() {
@@ -119,20 +123,6 @@
 
     function saveCart(cart) {
       localStorage.setItem("cart", JSON.stringify(cart));
-    }
-
-    function addToCart(productId, productName, quantity) {
-      let cart = getCart();
-      const existingItem = cart.find(item => item.id === productId);
-
-      if (existingItem) {
-        existingItem.quantity += quantity;
-      } else {
-        cart.push({ id: productId, name: productName, quantity });
-      }
-
-      saveCart(cart);
-      alert(`🛒 ${productName} додано у корзину!`);
     }
 
     async function loadConfig() {
@@ -226,30 +216,35 @@
             quantityInput.value = current + 1;
           });
 
-          const addToCartBtn = document.createElement("button");
-          addToCartBtn.className = "add-to-cart";
-          addToCartBtn.textContent = "Додати у корзину";
-          addToCartBtn.onclick = () => addToCart(row[0], row[2], parseInt(quantityInput.value) || 0);
-
           qtyContainer.appendChild(minusButton);
           qtyContainer.appendChild(quantityInput);
           qtyContainer.appendChild(plusButton);
-
+          
           rowContainer.appendChild(productInfo);
           rowContainer.appendChild(qtyContainer);
           li.appendChild(rowContainer);
-          li.appendChild(addToCartBtn);
           list.appendChild(li);
         });
-
+        
         productsDiv.appendChild(list);
       } catch (error) {
         console.error("Помилка отримання даних:", error);
       }
     }
+
+    function addAllToCart() {
+      let cart = getCart();
+      document.querySelectorAll("li").forEach(li => {
+        let quantity = parseInt(li.querySelector("input").value) || 0;
+        if (quantity > 0) {
+          cart.push({ id: li.dataset.productId, name: li.dataset.productName, quantity });
+        }
+      });
+      saveCart(cart);
+      alert("🛒 Всі вибрані товари додано у корзину!");
+    }
     
     loadConfig();
   </script>
-  <script src="../../config.js"></script>
 </body>
 </html>
