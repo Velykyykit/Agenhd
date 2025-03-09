@@ -72,7 +72,7 @@
     </div>
   </div>
   <script>
-    // Функція для отримання параметрів URL та декодування значень
+    // Отримання параметрів URL
     function getQueryParams() {
       const params = {};
       const queryString = window.location.search.substring(1);
@@ -85,17 +85,28 @@
       });
       return params;
     }
-    
+
+    function saveUserData(params) {
+      if (params.name) localStorage.setItem("user_name", params.name);
+      if (params.phone) localStorage.setItem("user_phone", params.phone);
+      if (params.id) localStorage.setItem("user_id", params.id);
+    }
+
+    function getUserData() {
+      return {
+        name: localStorage.getItem("user_name") || "незнайомий",
+        phone: localStorage.getItem("user_phone") || "незнайомий",
+        id: localStorage.getItem("user_id") || "невідомо"
+      };
+    }
+
     function displayUserInfo() {
       const params = getQueryParams();
-      const name = params.name || "незнайомий";
-      const phone = params.phone || "незнайомий";
-      const id = params.id || "невідомо";
-
-      const userInfoDiv = document.getElementById("user-info");
-      userInfoDiv.textContent = `👤 Користувач: ${name} | 📞 Телефон: ${phone} | 🆔 ID: ${id}`;
+      saveUserData(params);
+      const user = getUserData();
+      document.getElementById("user-info").textContent = `👤 Користувач: ${user.name} | 📞 Телефон: ${user.phone} | 🆔 ID: ${user.id}`;
     }
-    
+
     async function loadConfig() {
       try {
         const response = await fetch("../../config.js");
@@ -110,7 +121,7 @@
         console.error("Помилка завантаження конфігурації:", error);
       }
     }
-    
+
     async function fetchCourses(sheetId, apiKey) {
       const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/dictionary?key=${apiKey}`;
       try {
@@ -125,11 +136,8 @@
           return;
         }
 
-        // Зчитуємо name, phone та id, щоб передавати далі у products.html
-        const params = getQueryParams();
-        const userName = encodeURIComponent(params.name || "");
-        const userPhone = encodeURIComponent(params.phone || "");
-        const userId = encodeURIComponent(params.id || "");
+        // Отримуємо збережені дані користувача
+        const user = getUserData();
 
         data.values.slice(1).forEach(row => {
           const courseName = row[0];
@@ -138,7 +146,7 @@
           const link = document.createElement("a");
 
           // Передаємо ім'я, телефон та id як параметри до products.html
-          link.href = `../../webapp/order/products.html?course=${courseShort}&name=${userName}&phone=${userPhone}&id=${userId}`;
+          link.href = `../../webapp/order/products.html?course=${courseShort}`;
           link.className = "course-button";
           
           const img = new Image();
@@ -155,7 +163,7 @@
         console.error("Помилка отримання каталогу:", error);
       }
     }
-    
+
     displayUserInfo();
     loadConfig();
   </script>
