@@ -117,23 +117,6 @@
     .quantity-container input:focus {
       outline: 2px solid #ddd;
     }
-    .add-all-to-cart {
-      display: block;
-      margin: 20px auto 0;
-      padding: 10px 20px;
-      background: linear-gradient(to bottom, #9b59b6, #8e44ad);
-      border-radius: 20px;
-      border: none;
-      color: #fff;
-      font-size: 16px;
-      cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      transition: background-color 0.3s, transform 0.2s;
-    }
-    .add-all-to-cart:hover {
-      background-color: rgba(255,255,255,0.2);
-      transform: scale(1.05);
-    }
   </style>
 </head>
 <body>
@@ -144,8 +127,9 @@
       <button class="cart-button" onclick="openCart()">🛒 Корзина (<span id="cart-count">0</span>)</button>
     </div>
     <div id="products" class="product-list">Завантаження...</div>
-    <button class="add-all-to-cart" onclick="addAllToCart()">🛒 Додати у корзину</button>
+    <button class="cart-button" onclick="addAllToCart()">🛒 Додати у корзину</button>
   </div>
+  
   <script>
     function getCart() {
       return JSON.parse(localStorage.getItem("cart")) || [];
@@ -164,6 +148,37 @@
 
     function openCart() {
       window.location.href = "cart.html";
+    }
+
+    function syncQuantities() {
+      let cart = getCart();
+      document.querySelectorAll("li").forEach(li => {
+        let cartItem = cart.find(item => item.id === li.dataset.productId);
+        if (cartItem) {
+          li.querySelector("input").value = cartItem.quantity;
+        }
+      });
+    }
+
+    function addAllToCart() {
+      let cart = getCart();
+      document.querySelectorAll("li").forEach(li => {
+        let productId = li.dataset.productId;
+        let productName = li.dataset.productName;
+        let quantity = parseInt(li.querySelector("input").value) || 0;
+
+        if (quantity > 0) {
+          let existingItem = cart.find(item => item.id === productId);
+          if (existingItem) {
+            existingItem.quantity = quantity;
+          } else {
+            cart.push({ id: productId, name: productName, quantity });
+          }
+        }
+      });
+
+      saveCart(cart);
+      alert("🛒 Вибрані товари додані у корзину!");
     }
 
     async function fetchProducts(sheetId, apiKey) {
