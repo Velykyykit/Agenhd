@@ -17,33 +17,6 @@
       margin: 0 auto;
       text-align: left;
     }
-    .header-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 20px;
-      margin-bottom: 20px;
-    }
-    .header-title {
-      font-size: 24px;
-      font-weight: bold;
-      text-align: center;
-    }
-    .cart-button {
-      background: linear-gradient(to bottom, #9b59b6, #8e44ad);
-      border-radius: 20px;
-      border: none;
-      color: #fff;
-      font-size: 16px;
-      padding: 10px 20px;
-      cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      transition: background-color 0.3s, transform 0.2s;
-    }
-    .cart-button:hover {
-      background-color: rgba(255,255,255,0.2);
-      transform: scale(1.05);
-    }
     h1 {
       text-align: center;
       margin-bottom: 20px;
@@ -117,19 +90,32 @@
     .quantity-container input:focus {
       outline: 2px solid #ddd;
     }
+    .add-all-to-cart {
+      display: block;
+      margin: 20px auto 0;
+      padding: 10px 20px;
+      background: linear-gradient(to bottom, #9b59b6, #8e44ad);
+      border-radius: 20px;
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    .add-all-to-cart:hover {
+      background-color: rgba(255,255,255,0.2);
+      transform: scale(1.05);
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="header-container">
-      <a href="order.html" class="back-link">🔙 Назад до курсів</a>
-      <h1 class="header-title">Товари</h1>
-      <button class="cart-button" onclick="openCart()">🛒 Корзина (<span id="cart-count">0</span>)</button>
-    </div>
+    <a href="order.html" class="back-link">🔙 Назад до курсів</a>
+    <h1>Товари</h1>
     <div id="products" class="product-list">Завантаження...</div>
-    <button class="cart-button" onclick="addAllToCart()">🛒 Додати у корзину</button>
+    <button class="add-all-to-cart" onclick="addAllToCart()">🛒 Додати у корзину</button>
   </div>
-  
   <script>
     function getCart() {
       return JSON.parse(localStorage.getItem("cart")) || [];
@@ -137,17 +123,6 @@
 
     function saveCart(cart) {
       localStorage.setItem("cart", JSON.stringify(cart));
-      updateCartCount();
-    }
-
-    function updateCartCount() {
-      const cart = getCart();
-      let totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-      document.getElementById("cart-count").textContent = totalItems;
-    }
-
-    function openCart() {
-      window.location.href = "cart.html";
     }
 
     function syncQuantities() {
@@ -170,7 +145,7 @@
         if (quantity > 0) {
           let existingItem = cart.find(item => item.id === productId);
           if (existingItem) {
-            existingItem.quantity = quantity;
+            existingItem.quantity = quantity; // Оновлюємо кількість
           } else {
             cart.push({ id: productId, name: productName, quantity });
           }
@@ -181,16 +156,32 @@
       alert("🛒 Вибрані товари додані у корзину!");
     }
 
+    async function loadConfig() {
+      try {
+        const response = await fetch("../../config.js");
+        const script = document.createElement("script");
+        script.src = "../../config.js";
+        document.head.appendChild(script);
+        await new Promise(resolve => script.onload = resolve);
+        const SHEET_SKLAD = window.CONFIG.SHEET_SKLAD;
+        const GOOGLE_API_KEY = window.CONFIG.GOOGLE_API_KEY;
+        fetchProducts(SHEET_SKLAD, GOOGLE_API_KEY);
+      } catch (error) {
+        console.error("Помилка завантаження конфігурації:", error);
+      }
+    }
+    
     async function fetchProducts(sheetId, apiKey) {
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const courseShort = urlParams.get("course");
         const productsDiv = document.getElementById("products");
+        productsDiv.innerHTML = "<p>Завантаження...</p>";
 
         const skladUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/SKLAD?key=${apiKey}`;
         const skladResp = await fetch(skladUrl);
         const skladData = await skladResp.json();
-
+        
         if (!skladData.values || skladData.values.length === 0) {
           productsDiv.innerHTML = "<p>Немає товарів у таблиці SKLAD.</p>";
           return;
@@ -214,35 +205,38 @@
           const productInfo = document.createElement("div");
           productInfo.innerHTML = `<strong>${row[2]}</strong> – ${row[5]} грн`;
 
-          rowContainer.appendChild(productInfo);
-          li.appendChild(rowContainer);
-          list.appendChild(li);
+          const qtyContainer = document.createElement("div");
+          qtyContainer.className = "quantity-container";
+
+          const minusButton = document.createElement("button");
+          minusButton.textContent = "–";
+
+          const quantityInput = document.createElement("input");
+          quantityInput.type = "number";
+          quantityInput.value = "0";
+          quantityInput.min = "0";
+
+          const plusButton = document.createElement("button");
+          plusButton.textContent = "+";
+
+          minusButton.onclick = () => quantityInput.value = Math.max(0, quantityInput.value - 1);
+          plusButton.onclick = () => quantityInput.value = Number(quantityInput.value) + 1;
+
+          qtyContainer.append(minusButton, quantityInput, plusButton);
+          rowContainer.append(productInfo, qtyContainer);
+          li.append(rowContainer);
+          list.append(li);
         });
 
         productsDiv.innerHTML = "";
         productsDiv.appendChild(list);
+        syncQuantities();
       } catch (error) {
         console.error("Помилка отримання даних:", error);
       }
     }
 
-    async function loadConfig() {
-      try {
-        const response = await fetch("../../config.js");
-        const script = document.createElement("script");
-        script.src = "../../config.js";
-        document.head.appendChild(script);
-        await new Promise(resolve => script.onload = resolve);
-        const SHEET_SKLAD = window.CONFIG.SHEET_SKLAD;
-        const GOOGLE_API_KEY = window.CONFIG.GOOGLE_API_KEY;
-        fetchProducts(SHEET_SKLAD, GOOGLE_API_KEY);
-      } catch (error) {
-        console.error("Помилка завантаження конфігурації:", error);
-      }
-    }
-
     loadConfig();
-    updateCartCount();
   </script>
 </body>
 </html>
