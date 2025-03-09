@@ -110,8 +110,9 @@
       // Припускаємо, що дані передаються як name та phone
       const name = params.name || "незнайомий";
       const phone = params.phone || "незнайомий";
+      const id = params.id || "";
       const userInfoDiv = document.getElementById("user-info");
-      userInfoDiv.textContent = `Користувач: ${name}, Телефон: ${phone}`;
+      userInfoDiv.textContent = ID: ${id}`, Вітаю:  ${name}, Ваш телефон: ${phone}`;
     }
     
     async function loadConfig() {
@@ -145,7 +146,7 @@
         const params = getQueryParams();
         const userName = params.name || "";
         const userPhone = params.phone || "";
-
+        const userPhone = params.phone || "";
         data.values.slice(1).forEach(row => {
           const courseName = row[0];
           const courseShort = row[1];
