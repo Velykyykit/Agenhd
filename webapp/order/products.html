@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
-  <title>Продукти</title>
+  <title>Товари</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
@@ -17,17 +17,12 @@
       margin: 0 auto;
       text-align: left;
     }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
     .back-link {
       text-decoration: none;
       color: #007bff;
       font-size: 18px;
       display: inline-block;
+      margin-bottom: 15px;
     }
     .back-link:hover {
       text-decoration: underline;
@@ -42,6 +37,7 @@
       cursor: pointer;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
       transition: background-color 0.3s, transform 0.2s;
+      margin-left: 10px;
     }
     .cart-button:hover {
       background-color: rgba(255,255,255,0.2);
@@ -126,21 +122,13 @@
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <a href="order.html" class="back-link">🔙 Назад до курсів</a>
-      <button class="cart-button" onclick="openCart()">🛒 Корзина</button>
-    </div>
-    
+    <a href="order.html" class="back-link">🔙 Назад до курсів</a>
+    <button class="cart-button" onclick="openCart()">🛒 Корзина</button>
+    <!-- Заголовок "Товари" видалено -->
     <div id="products" class="product-list">Завантаження...</div>
-    
     <button class="add-all-to-cart" onclick="addAllToCart()">🛒 Додати у корзину</button>
   </div>
-
   <script>
-    function openCart() {
-      window.location.href = "cart.html";
-    }
-
     function getCart() {
       return JSON.parse(localStorage.getItem("cart")) || [];
     }
@@ -169,7 +157,7 @@
         if (quantity > 0) {
           let existingItem = cart.find(item => item.id === productId);
           if (existingItem) {
-            existingItem.quantity = quantity;
+            existingItem.quantity = quantity; // Оновлюємо кількість
           } else {
             cart.push({ id: productId, name: productName, quantity });
           }
@@ -178,6 +166,10 @@
 
       saveCart(cart);
       alert("🛒 Вибрані товари додані у корзину!");
+    }
+
+    function openCart() {
+      window.location.href = "cart.html";
     }
 
     async function loadConfig() {
@@ -194,7 +186,7 @@
         console.error("Помилка завантаження конфігурації:", error);
       }
     }
-
+    
     async function fetchProducts(sheetId, apiKey) {
       try {
         const urlParams = new URLSearchParams(window.location.search);
@@ -205,7 +197,7 @@
         const skladUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/SKLAD?key=${apiKey}`;
         const skladResp = await fetch(skladUrl);
         const skladData = await skladResp.json();
-
+        
         if (!skladData.values || skladData.values.length === 0) {
           productsDiv.innerHTML = "<p>Немає товарів у таблиці SKLAD.</p>";
           return;
@@ -223,10 +215,32 @@
           li.dataset.productId = row[0];
           li.dataset.productName = row[2];
 
-          li.innerHTML = `<div class="row-container">
-            <div><strong>${row[2]}</strong> – ${row[5]} грн</div>
-          </div>`;
+          const rowContainer = document.createElement("div");
+          rowContainer.className = "row-container";
 
+          const productInfo = document.createElement("div");
+          productInfo.innerHTML = `<strong>${row[2]}</strong> – ${row[5]} грн`;
+
+          const qtyContainer = document.createElement("div");
+          qtyContainer.className = "quantity-container";
+
+          const minusButton = document.createElement("button");
+          minusButton.textContent = "–";
+
+          const quantityInput = document.createElement("input");
+          quantityInput.type = "number";
+          quantityInput.value = "0";
+          quantityInput.min = "0";
+
+          const plusButton = document.createElement("button");
+          plusButton.textContent = "+";
+
+          minusButton.onclick = () => quantityInput.value = Math.max(0, quantityInput.value - 1);
+          plusButton.onclick = () => quantityInput.value = Number(quantityInput.value) + 1;
+
+          qtyContainer.append(minusButton, quantityInput, plusButton);
+          rowContainer.append(productInfo, qtyContainer);
+          li.append(rowContainer);
           list.append(li);
         });
 
