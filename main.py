@@ -104,7 +104,7 @@ async def handle_contact(message: types.Message):
         user_data = await auth_manager.check_user_in_database(phone_number)
         logging.info(f"[DEBUG] Відповідь від auth.py: {user_data}")
         if user_data:
-            # Отримуємо ID користувача з Google Sheets
+            # Отримуємо ID користувача з першого стовпця таблиці `contact`
             user_id = user_data.get("id", "невідомо")
             user_name = user_data.get("name", "незнайомий")
             
@@ -113,7 +113,7 @@ async def handle_contact(message: types.Message):
 
             # Зберігаємо дані користувача в глобальному словнику
             USER_DATA[message.from_user.id] = {
-                "id": user_id,
+                "id": user_id,  # ID з першого стовпця Google Sheets
                 "name": user_name,
                 "phone": phone_number,
                 "tg_id": message.from_user.id
