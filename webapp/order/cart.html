@@ -131,6 +131,13 @@
   </div>
 
   <script>
+    // Симульовані дані з таблиці SHEET_SKLAD
+    const stockData = {
+      "p1": { id: "p1", name: "Product 1", totalQuantity: 100, reserv: 20 },
+      "p2": { id: "p2", name: "Product 2", totalQuantity: 50, reserv: 10 }
+      // Додайте інші товари за потребою
+    };
+
     function getCart() {
       return JSON.parse(localStorage.getItem("cart")) || [];
     }
@@ -149,7 +156,7 @@
         return;
       }
 
-      cart.forEach((item, index) => {
+      cart.forEach((item) => {
         const div = document.createElement("div");
         div.className = "cart-item";
         div.innerHTML = `
@@ -196,7 +203,34 @@
       }
     }
 
-    function checkout() {
+    // Симульована асинхронна функція для отримання даних товару з SHEET_SKLAD
+    function getStockItem(productId) {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          if (stockData[productId]) {
+            resolve(stockData[productId]);
+          } else {
+            reject("Товар не знайдено.");
+          }
+        }, 100);
+      });
+    }
+
+    // Симульована асинхронна функція для оновлення резерву товару в SHEET_SKLAD
+    function reserveStock(productId, newReserv) {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          if (stockData[productId]) {
+            stockData[productId].reserv = newReserv;
+            resolve();
+          } else {
+            reject("Товар не знайдено.");
+          }
+        }, 100);
+      });
+    }
+
+    async function checkout() {
       const cart = getCart();
 
       if (cart.length === 0) {
@@ -204,10 +238,53 @@
         return;
       }
 
-      alert("✅ Ваше замовлення оформлено!");
+      let errorMessages = [];
+
+      // Перевірка наявності кожного товару
+      for (const item of cart) {
+        try {
+          const stockItem = await getStockItem(item.id);
+          const availableUnits = stockItem.totalQuantity - stockItem.reserv;
+          if (item.quantity > availableUnits) {
+            errorMessages.push(`Товар "${item.name}" має недостатньо одиниць. Доступно: ${availableUnits}.`);
+          }
+        } catch (error) {
+          errorMessages.push(`Помилка при перевірці товару "${item.name}": ${error}`);
+        }
+      }
+
+      if (errorMessages.length > 0) {
+        alert(errorMessages.join("\n"));
+        return;
+      }
+
+      // Резервування товарів (оновлення колонки "reserv")
+      for (const item of cart) {
+        try {
+          const stockItem = await getStockItem(item.id);
+          const newReserv = stockItem.reserv + item.quantity;
+          await reserveStock(item.id, newReserv);
+        } catch (error) {
+          alert(`Помилка при резервуванні товару "${item.name}": ${error}`);
+          return;
+        }
+      }
+
+      // Отримання id користувача (припускаємо, що він зберігається у localStorage)
+      const userId = localStorage.getItem("userId") || "guest";
+
+      // Підготовка даних для передачі: id товару та його кількість з корзини
+      const cartData = cart.map(item => ({ id: item.id, quantity: item.quantity }));
+
+      // Очистка корзини після резервування
       localStorage.removeItem("cart");
-      loadCart();
       syncWithProducts();
+
+      // Перехід на сторінку fin.html з передачею параметрів: id користувача та даних корзини
+      const params = new URLSearchParams();
+      params.set("userId", userId);
+      params.set("cart", JSON.stringify(cartData));
+      window.location.href = "fin.html?" + params.toString();
     }
 
     function goBack() {
