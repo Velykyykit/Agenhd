@@ -99,34 +99,51 @@
       document.getElementById("cart-count").textContent = totalItems;
     }
 
-    function syncQuantities() {
-      let cart = getCart();
-      document.querySelectorAll("li").forEach(li => {
-        let cartItem = cart.find(item => item.id === li.dataset.productId);
-        if (cartItem) {
-          li.querySelector("input").value = cartItem.quantity;
-        }
-      });
-    }
+    async function fetchProducts(sheetId, apiKey) {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const courseShort = urlParams.get("course");
+        const productsDiv = document.getElementById("products");
+        productsDiv.innerHTML = "<p>Завантаження...</p>";
 
-    function updateCartFromInputs() {
-      let cart = getCart();
-      document.querySelectorAll("li").forEach(li => {
-        let productId = li.dataset.productId;
-        let quantity = parseInt(li.querySelector("input").value) || 0;
-        let index = cart.findIndex(item => item.id === productId);
+        const skladUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/SKLAD?key=${apiKey}`;
+        const skladResp = await fetch(skladUrl);
+        const skladData = await skladResp.json();
 
-        if (quantity > 0) {
-          if (index !== -1) {
-            cart[index].quantity = quantity;
-          } else {
-            cart.push({ id: productId, name: li.dataset.productName, quantity });
-          }
-        } else if (index !== -1) {
-          cart.splice(index, 1);
+        if (!skladData.values || skladData.values.length === 0) {
+          productsDiv.innerHTML = "<p>Немає товарів у таблиці SKLAD.</p>";
+          return;
         }
-      });
-      saveCart(cart);
+
+        const products = skladData.values.slice(1).filter(row => row[1] === courseShort);
+        if (products.length === 0) {
+          productsDiv.innerHTML = "<p>Немає товарів для цього курсу.</p>";
+          return;
+        }
+
+        const list = document.createElement("ul");
+        products.forEach(row => {
+          const li = document.createElement("li");
+          li.dataset.productId = row[0];
+          li.dataset.productName = row[2];
+          li.dataset.stock = row[3];
+          li.innerHTML = `
+            <div class="row-container">
+              <div>🆔<strong>${row[0]} ${row[2]}</strong> <br>Ціна: ${row[4]} грн <br>На складі: ${row[3]} шт.</div>
+              <div class="quantity-container">
+                <button onclick="this.nextElementSibling.stepDown(); updateCartFromInputs();">–</button>
+                <input type="number" value="0" min="0" onchange="updateCartFromInputs()">
+                <button onclick="this.previousElementSibling.stepUp(); updateCartFromInputs();">+</button>
+              </div>
+            </div>`;
+          list.appendChild(li);
+        });
+
+        productsDiv.innerHTML = "";
+        productsDiv.appendChild(list);
+      } catch (error) {
+        console.error("Помилка отримання даних:", error);
+      }
     }
 
     async function loadConfig() {
