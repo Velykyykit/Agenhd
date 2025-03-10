@@ -140,18 +140,22 @@
       });
     }
 
-    // Функція для додавання всіх товарів до корзини
+    // Функція для додавання всіх товарів до корзини з перевіркою наявності
     function addAllToCart() {
       const cart = getCart();
       const items = document.querySelectorAll("li");
+      let notAvailable = [];
 
       items.forEach(li => {
         const productId = li.dataset.productId;
         const productName = li.dataset.productName;
+        const stock = parseInt(li.dataset.productStock) || 0; // Додаємо збереження кількості товарів
         const quantity = parseInt(li.querySelector("input").value) || 0;
         const index = cart.findIndex(item => item.id === productId);
 
-        if (quantity > 0) {
+        if (quantity > stock) {
+          notAvailable.push(`${productName} (На складі: ${stock}, Ви обрали: ${quantity})`);
+        } else if (quantity > 0) {
           if (index !== -1) {
             cart[index].quantity = quantity;
           } else {
@@ -163,7 +167,12 @@
       });
 
       saveCart(cart);
-      alert("🛒 Корзина оновлена!");
+
+      if (notAvailable.length > 0) {
+        alert("⚠️ Не достатньо товару на складі:\n" + notAvailable.join("\n"));
+      } else {
+        alert("🛒 Товари успішно додані у корзину!");
+      }
     }
 
     // Функція для переходу на сторінку корзини
@@ -209,17 +218,20 @@
           return;
         }
 
-        const fragment = document.createDocumentFragment();
+        const list = document.createElement("ul");
         products.forEach(row => {
           const li = document.createElement("li");
           li.dataset.productId = row[0];
           li.dataset.productName = row[2];
+          li.dataset.productStock = row[3]; // Додаємо кількість товару на складі
 
           const rowContainer = document.createElement("div");
           rowContainer.className = "row-container";
 
           const productInfo = document.createElement("div");
-          productInfo.innerHTML = `🆔<strong>${row[0]}. - <strong>${row[2]}  <br>Ціна:<strong> ${row[4]} грн. <br>На складі:<strong> ${row[3]} шт.`;
+          productInfo.innerHTML = `🆔<strong>${row[0]}. - <strong>${row[2]}</strong> 
+          <br><strong>Ціна:</strong> ${row[4]} грн
+          <br><strong>На складі:</strong> ${row[3]} шт.`;
 
           const qtyContainer = document.createElement("div");
           qtyContainer.className = "quantity-container";
@@ -246,18 +258,17 @@
           qtyContainer.append(minusButton, quantityInput, plusButton);
           rowContainer.append(productInfo, qtyContainer);
           li.append(rowContainer);
-          fragment.appendChild(li);
+          list.appendChild(li);
         });
 
         productsDiv.innerHTML = "";
-        productsDiv.appendChild(fragment);
-        syncQuantities();
+        productsDiv.appendChild(list);
       } catch (error) {
         console.error("Помилка отримання даних:", error);
       }
     }
 
     loadConfig();
-  </script>
+</script>
 </body>
 </html>
