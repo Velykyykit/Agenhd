@@ -17,9 +17,8 @@
       margin: 0 auto;
       text-align: left;
     }
-    .cart-button, .add-all-to-cart {
-      display: block;
-      margin: 10px auto 20px auto;
+    .cart-button, .add-all-to-cart, .quantity-button {
+      display: inline-block;
       background: linear-gradient(to bottom, #9b59b6, #8e44ad);
       border-radius: 20px;
       border: none;
@@ -29,8 +28,9 @@
       cursor: pointer;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
       transition: background-color 0.3s, transform 0.2s;
+      text-align: center;
     }
-    .cart-button:hover, .add-all-to-cart:hover {
+    .cart-button:hover, .add-all-to-cart:hover, .quantity-button:hover {
       background-color: rgba(255,255,255,0.2);
       transform: scale(1.05);
     }
@@ -44,6 +44,20 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+    }
+    .quantity-container {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .quantity-container input {
+      width: 40px;
+      text-align: center;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      background: #fff;
+      color: #000;
     }
   </style>
 </head>
@@ -161,9 +175,9 @@
             <div class="row-container">
               <div>🆔<strong>${row[0]} ${row[2]}</strong> <br>Ціна: ${row[4]} грн <br>На складі: ${row[3]} шт.</div>
               <div class="quantity-container">
-                <button onclick="this.nextElementSibling.stepDown()">–</button>
+                <button class="quantity-button" onclick="this.nextElementSibling.stepDown()">–</button>
                 <input type="number" value="0" min="0">
-                <button onclick="this.previousElementSibling.stepUp()">+</button>
+                <button class="quantity-button" onclick="this.previousElementSibling.stepUp()">+</button>
               </div>
             </div>`;
           list.appendChild(li);
