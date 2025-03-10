@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
-  <title>Товари</title>
+  <title>Виберіть курс 🎓</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
@@ -15,21 +15,26 @@
       padding: 20px;
       max-width: 700px;
       margin: 0 auto;
-      text-align: left;
+      text-align: center;
     }
-    .back-link {
-      text-decoration: none;
-      color: #007bff;
-      font-size: 18px;
-      display: inline-block;
+    #user-info {
       margin-bottom: 15px;
+      font-size: 16px;
+      font-weight: bold;
     }
-    .back-link:hover {
-      text-decoration: underline;
+    .header-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .header-title {
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
     }
     .cart-button {
-      display: block;
-      margin: 10px auto 20px auto;
       background: linear-gradient(to bottom, #9b59b6, #8e44ad);
       border-radius: 20px;
       border: none;
@@ -44,243 +49,156 @@
       background-color: rgba(255,255,255,0.2);
       transform: scale(1.05);
     }
-    .product-list {
-      background: #fff;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      justify-content: center;
     }
-    ul {
-      list-style-type: none;
-      padding-left: 0;
-    }
-    li {
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid #ccc;
-    }
-    .row-container {
+    .course-button {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-    }
-    .quantity-container {
-      display: inline-flex;
-      align-items: center;
-      background: linear-gradient(to bottom, #9b59b6, #8e44ad);
-      border-radius: 20px;
-      padding: 2px 6px;
-      box-shadow: inset 0 0 1px #fff, 0 2px 3px rgba(0,0,0,0.2);
-    }
-    .quantity-container button {
-      background: transparent;
-      border: none;
-      color: #fff;
-      font-size: 16px;
-      width: 24px;
-      height: 24px;
-      line-height: 24px;
-      text-align: center;
+      justify-content: center;
+      background: #ffffff;
+      border: 1px solid #ccc;
       cursor: pointer;
-      border-radius: 50%;
-      transition: background-color 0.3s, transform 0.2s;
-    }
-    .quantity-container button:hover {
-      background-color: rgba(255,255,255,0.2);
-      transform: scale(1.1);
-    }
-    .quantity-container input {
-      width: 40px;
       text-align: center;
+      border-radius: 8px;
       font-size: 16px;
-      border: none;
-      border-radius: 4px;
-      margin: 0 5px;
-      background: #fff;
-      color: #000;
+      font-weight: bold;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      text-decoration: none;
+      color: inherit;
+      width: 100%;
+      max-width: 300px;
+      aspect-ratio: 1/1;
+      overflow: hidden;
     }
-    .quantity-container input:focus {
-      outline: 2px solid #ddd;
+    .course-button img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
     }
-    .add-all-to-cart {
-      display: block;
-      margin: 20px auto 0;
-      padding: 10px 20px;
-      background: linear-gradient(to bottom, #9b59b6, #8e44ad);
-      border-radius: 20px;
-      border: none;
-      color: #fff;
-      font-size: 16px;
-      cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      transition: background-color 0.3s, transform 0.2s;
-    }
-    .add-all-to-cart:hover {
-      background-color: rgba(255,255,255,0.2);
-      transform: scale(1.05);
+    .course-button:hover {
+      background: #ddd;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <a href="order.html" class="back-link">🔙 Назад до курсів</a>
-    <!-- Оновлена кнопка "Корзина" з відображенням кількості товарів -->
+    <div id="user-info">Завантаження даних користувача...</div>
+  </div>
+  <div class="header-container">
+    <h1 class="header-title">🎓 Виберіть курс</h1>
     <button class="cart-button" onclick="openCart()">🛒 Корзина (<span id="cart-count">0</span>)</button>
-    <div id="products" class="product-list">Завантаження...</div>
-    <button class="add-all-to-cart" onclick="addAllToCart()">🛒 Додати у корзину</button>
+  </div>
+  <div class="grid-container" id="catalog">
+    <p>Завантаження...</p>
   </div>
   <script>
-    const getCart = () => JSON.parse(localStorage.getItem("cart")) || [];
-    
-    const updateCartCount = () => {
-      const cart = getCart();
-      // Підрахунок загальної кількості товарів
-      const count = cart.reduce((acc, item) => acc + item.quantity, 0);
-      document.getElementById("cart-count").textContent = count;
-    };
-
-    const saveCart = (cart) => {
-      localStorage.setItem("cart", JSON.stringify(cart));
-      updateCartCount();
-    };
-
-    const syncQuantities = () => {
-      const cart = getCart();
-      document.querySelectorAll("li").forEach(li => {
-        const cartItem = cart.find(item => item.id === li.dataset.productId);
-        if (cartItem) {
-          li.querySelector("input").value = cartItem.quantity;
+    function getQueryParams() {
+      const params = {};
+      const queryString = window.location.search.substring(1);
+      const pairs = queryString.split("&");
+      pairs.forEach(pair => {
+        const [key, value] = pair.split("=");
+        if (key) {
+          params[key] = decodeURIComponent(value || "").replace(/\+/g, " ");
         }
       });
-    };
+      return params;
+    }
 
-    const addAllToCart = () => {
-      const cart = getCart();
-      let messages = "";
-      document.querySelectorAll("li").forEach(li => {
-        const productId = li.dataset.productId;
-        const productName = li.dataset.productName;
-        const availableStock = parseInt(li.dataset.stock, 10) || 0;
-        const quantityInput = li.querySelector("input");
-        const quantity = parseInt(quantityInput.value, 10) || 0;
+    function saveUserData(params) {
+      if (params.name) localStorage.setItem("user_name", params.name);
+      if (params.phone) localStorage.setItem("user_phone", params.phone);
+      if (params.id) localStorage.setItem("user_id", params.id);
+    }
 
-        if (quantity > 0) {
-          if (quantity > availableStock) {
-            messages += `Товар "${productName}" не може бути доданий. Доступно ${availableStock} шт.\n`;
-            // Скидання значення інпуту до максимально доступного
-            quantityInput.value = availableStock;
-          } else {
-            const index = cart.findIndex(item => item.id === productId);
-            if (index !== -1) {
-              cart[index].quantity = quantity;
-            } else {
-              cart.push({ id: productId, name: productName, quantity });
-            }
-          }
-        } else {
-          const index = cart.findIndex(item => item.id === productId);
-          if (index !== -1) {
-            cart.splice(index, 1);
-          }
-        }
-      });
-      saveCart(cart);
-      alert(messages ? messages + "\nІнші товари додано до корзини." : "🛒 Корзина оновлена!");
-    };
+    function getUserData() {
+      return {
+        name: localStorage.getItem("user_name") || "незнайомий",
+        phone: localStorage.getItem("user_phone") || "незнайомий",
+        id: localStorage.getItem("user_id") || "невідомо"
+      };
+    }
 
-    const openCart = () => window.location.href = "cart.html";
+    function displayUserInfo() {
+      const params = getQueryParams();
+      saveUserData(params);
+      const user = getUserData();
+      document.getElementById("user-info").textContent = `👤 Користувач: ${user.name} | 📞 Телефон: ${user.phone} | 🆔 ID: ${user.id}`;
+    }
 
-    const loadConfig = async () => {
+    function updateCartCount() {
+      const cart = JSON.parse(localStorage.getItem("cart")) || [];
+      let totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+      document.getElementById("cart-count").textContent = totalItems;
+    }
+
+    function openCart() {
+      window.location.href = "cart.html";
+    }
+
+    async function loadConfig() {
       try {
         const response = await fetch("../../config.js");
         const script = document.createElement("script");
         script.src = "../../config.js";
         document.head.appendChild(script);
         await new Promise(resolve => script.onload = resolve);
-        const { SHEET_SKLAD, GOOGLE_API_KEY } = window.CONFIG;
-        fetchProducts(SHEET_SKLAD, GOOGLE_API_KEY);
+        const SHEET_SKLAD = window.CONFIG.SHEET_SKLAD;
+        const GOOGLE_API_KEY = window.CONFIG.GOOGLE_API_KEY;
+        fetchCourses(SHEET_SKLAD, GOOGLE_API_KEY);
       } catch (error) {
         console.error("Помилка завантаження конфігурації:", error);
       }
-    };
+    }
 
-    const fetchProducts = async (sheetId, apiKey) => {
+    async function fetchCourses(sheetId, apiKey) {
+      const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/dictionary?key=${apiKey}`;
       try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const courseShort = urlParams.get("course");
-        const productsDiv = document.getElementById("products");
-        productsDiv.innerHTML = "<p>Завантаження...</p>";
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error("Не вдалося отримати дані з Google Sheets");
+        const data = await response.json();
+        const catalogDiv = document.getElementById("catalog");
+        catalogDiv.innerHTML = "";
 
-        const skladUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/SKLAD?key=${apiKey}`;
-        const skladResp = await fetch(skladUrl);
-        const skladData = await skladResp.json();
-
-        if (!skladData.values || skladData.values.length === 0) {
-          productsDiv.innerHTML = "<p>Немає товарів у таблиці SKLAD.</p>";
+        if (!data.values || data.values.length === 0) {
+          catalogDiv.innerHTML = "<p>Немає даних у таблиці</p>";
           return;
         }
 
-        const products = skladData.values.slice(1).filter(row => row[1] === courseShort);
-        if (products.length === 0) {
-          productsDiv.innerHTML = "<p>Немає товарів для цього курсу.</p>";
-          return;
-        }
+        data.values.slice(1).forEach(row => {
+          const courseName = row[0];
+          const courseShort = row[1];
+          const imagePath = `../../webapp/img/courses/${courseShort}.jpg`;
+          const link = document.createElement("a");
 
-        const listFragment = document.createDocumentFragment();
-        const list = document.createElement("ul");
-
-        products.forEach(row => {
-          const li = document.createElement("li");
-          li.dataset.productId = row[0];
-          li.dataset.productName = row[2];
-          li.dataset.stock = row[3];
-
-          const rowContainer = document.createElement("div");
-          rowContainer.className = "row-container";
-
-          const productInfo = document.createElement("div");
-          productInfo.innerHTML = `🆔<strong>${row[0]}</strong> <strong>${row[2]}</strong> <br>
-            <strong>Ціна: ${row[4]} грн</strong> <br>
-            <strong>На складі: ${row[3]} шт.</strong>`;
-
-          const qtyContainer = document.createElement("div");
-          qtyContainer.className = "quantity-container";
-
-          const updateQuantity = (delta, input) => {
-            const current = parseInt(input.value, 10) || 0;
-            input.value = Math.max(0, current + delta);
+          const user = getUserData();
+          link.href = `../../webapp/order/products.html?course=${courseShort}&name=${encodeURIComponent(user.name)}&phone=${encodeURIComponent(user.phone)}&id=${encodeURIComponent(user.id)}`;
+          link.className = "course-button";
+          
+          const img = new Image();
+          img.src = imagePath;
+          img.onload = () => {
+            link.innerHTML = `<img src="${imagePath}" alt="${courseName}" loading="lazy">`;
           };
-
-          const quantityInput = document.createElement("input");
-          quantityInput.type = "number";
-          quantityInput.value = "0";
-          quantityInput.min = "0";
-
-          const minusButton = document.createElement("button");
-          minusButton.textContent = "–";
-          minusButton.onclick = () => updateQuantity(-1, quantityInput);
-
-          const plusButton = document.createElement("button");
-          plusButton.textContent = "+";
-          plusButton.onclick = () => updateQuantity(1, quantityInput);
-
-          qtyContainer.append(minusButton, quantityInput, plusButton);
-          rowContainer.append(productInfo, qtyContainer);
-          li.append(rowContainer);
-          list.appendChild(li);
+          img.onerror = () => {
+            link.innerHTML = `${courseName} 📚`;
+          };
+          catalogDiv.appendChild(link);
         });
-
-        listFragment.appendChild(list);
-        productsDiv.innerHTML = "";
-        productsDiv.appendChild(listFragment);
-        syncQuantities();
-        updateCartCount();
       } catch (error) {
-        console.error("Помилка отримання даних:", error);
+        console.error("Помилка отримання каталогу:", error);
       }
-    };
+    }
 
+    displayUserInfo();
+    updateCartCount();
     loadConfig();
   </script>
+  <script src="../../config.js"></script>
 </body>
 </html>
