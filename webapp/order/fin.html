@@ -1,1 +1,119 @@
-
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Оформлення рахунку</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #ffffff;
+      color: #000;
+      padding: 20px;
+    }
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .order-details {
+      margin-top: 20px;
+      border-top: 1px solid #ccc;
+      padding-top: 15px;
+    }
+    .order-item {
+      border-bottom: 1px solid #ccc;
+      padding: 10px 0;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 15px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      box-sizing: border-box;
+    }
+    .btn {
+      display: block;
+      margin: 20px auto;
+      background: linear-gradient(to bottom, #9b59b6, #8e44ad);
+      border-radius: 20px;
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      padding: 12px 24px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background-color: rgba(255,255,255,0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Оформлення рахунку</h1>
+    <div id="user-info"></div>
+    <div id="order-summary" class="order-details"></div>
+    <label for="delivery-address">Адреса доставки:</label>
+    <input type="text" id="delivery-address" placeholder="Введіть адресу доставки">
+    <button class="btn" onclick="confirmOrder()">Підтвердити замовлення</button>
+  </div>
+  
+  <script>
+    // Отримання параметрів із query string
+    function getQueryParams() {
+      const params = {};
+      const queryString = window.location.search.substring(1);
+      const pairs = queryString.split("&");
+      pairs.forEach(pair => {
+        const [key, value] = pair.split("=");
+        if (key) {
+          params[key] = decodeURIComponent(value || "").replace(/\+/g, " ");
+        }
+      });
+      return params;
+    }
+    function displayOrderDetails() {
+      const params = getQueryParams();
+      const userId = params.user_id || "невідомо";
+      let cart = [];
+      try {
+        cart = JSON.parse(params.cart);
+      } catch (error) {
+        console.error("Невірний формат даних корзини:", error);
+      }
+      // Відображення інформації про користувача
+      document.getElementById("user-info").innerHTML = `<p>🆔 ID користувача: ${userId}</p>`;
+      // Відображення підсумку замовлення
+      const summaryDiv = document.getElementById("order-summary");
+      if (cart.length === 0) {
+        summaryDiv.innerHTML = "<p>Корзина порожня.</p>";
+        return;
+      }
+      cart.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "order-item";
+        div.innerHTML = `<p>Товар ID: ${item.id}</p><p>Кількість: ${item.quantity}</p>`;
+        summaryDiv.appendChild(div);
+      });
+    }
+    function confirmOrder() {
+      const address = document.getElementById("delivery-address").value.trim();
+      if (!address) {
+        alert("Будь ласка, введіть адресу доставки.");
+        return;
+      }
+      // Тут має бути відправка даних замовлення на сервер для фінальної обробки.
+      alert("Замовлення підтверджено! Дякуємо за покупку.");
+      // За бажанням можна здійснити редірект або інші дії.
+    }
+    displayOrderDetails();
+  </script>
+</body>
+</html>
