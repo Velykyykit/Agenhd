@@ -124,42 +124,53 @@
 <body>
   <div class="container">
     <a href="order.html" class="back-link">🔙 Назад до курсів</a>
-    <button class="cart-button" onclick="openCart()">🛒 Корзина</button>
+    <!-- Оновлена кнопка "Корзина" з відображенням кількості товарів -->
+    <button class="cart-button" onclick="openCart()">🛒 Корзина (<span id="cart-count">0</span>)</button>
     <div id="products" class="product-list">Завантаження...</div>
     <button class="add-all-to-cart" onclick="addAllToCart()">🛒 Додати у корзину</button>
   </div>
   <script>
-    function getCart() {
-      return JSON.parse(localStorage.getItem("cart")) || [];
-    }
+    const getCart = () => JSON.parse(localStorage.getItem("cart")) || [];
+    
+    const updateCartCount = () => {
+      const cart = getCart();
+      // Підрахунок загальної кількості товарів
+      const count = cart.reduce((acc, item) => acc + item.quantity, 0);
+      document.getElementById("cart-count").textContent = count;
+    };
 
-    function saveCart(cart) {
+    const saveCart = (cart) => {
       localStorage.setItem("cart", JSON.stringify(cart));
-    }
+      updateCartCount();
+    };
 
-    function syncQuantities() {
-      let cart = getCart();
+    const syncQuantities = () => {
+      const cart = getCart();
       document.querySelectorAll("li").forEach(li => {
-        let cartItem = cart.find(item => item.id === li.dataset.productId);
+        const cartItem = cart.find(item => item.id === li.dataset.productId);
         if (cartItem) {
           li.querySelector("input").value = cartItem.quantity;
         }
       });
-    }
+    };
 
-    function addAllToCart() {
-      let cart = getCart();
+    const addAllToCart = () => {
+      const cart = getCart();
       let messages = "";
       document.querySelectorAll("li").forEach(li => {
-        let productId = li.dataset.productId;
-        let productName = li.dataset.productName;
-        let availableStock = parseInt(li.dataset.stock, 10) || 0;
-        let quantity = parseInt(li.querySelector("input").value) || 0;
+        const productId = li.dataset.productId;
+        const productName = li.dataset.productName;
+        const availableStock = parseInt(li.dataset.stock, 10) || 0;
+        const quantityInput = li.querySelector("input");
+        const quantity = parseInt(quantityInput.value, 10) || 0;
+
         if (quantity > 0) {
           if (quantity > availableStock) {
-            messages += `"${productName}" не доданий. Доступно ${availableStock} шт.\n`;
+            messages += `Товар "${productName}" не може бути доданий. Доступно ${availableStock} шт.\n`;
+            // Скидання значення інпуту до максимально доступного
+            quantityInput.value = availableStock;
           } else {
-            let index = cart.findIndex(item => item.id === productId);
+            const index = cart.findIndex(item => item.id === productId);
             if (index !== -1) {
               cart[index].quantity = quantity;
             } else {
@@ -167,40 +178,33 @@
             }
           }
         } else {
-          let index = cart.findIndex(item => item.id === productId);
+          const index = cart.findIndex(item => item.id === productId);
           if (index !== -1) {
             cart.splice(index, 1);
           }
         }
       });
       saveCart(cart);
-      if (messages) {
-        alert(messages + "\nІнші товари додано до корзини.");
-      } else {
-        alert("🛒 Корзина оновлена!");
-      }
-    }
+      alert(messages ? messages + "\nІнші товари додано до корзини." : "🛒 Корзина оновлена!");
+    };
 
-    function openCart() {
-      window.location.href = "cart.html";
-    }
+    const openCart = () => window.location.href = "cart.html";
 
-    async function loadConfig() {
+    const loadConfig = async () => {
       try {
         const response = await fetch("../../config.js");
         const script = document.createElement("script");
         script.src = "../../config.js";
         document.head.appendChild(script);
         await new Promise(resolve => script.onload = resolve);
-        const SHEET_SKLAD = window.CONFIG.SHEET_SKLAD;
-        const GOOGLE_API_KEY = window.CONFIG.GOOGLE_API_KEY;
+        const { SHEET_SKLAD, GOOGLE_API_KEY } = window.CONFIG;
         fetchProducts(SHEET_SKLAD, GOOGLE_API_KEY);
       } catch (error) {
         console.error("Помилка завантаження конфігурації:", error);
       }
-    }
-    
-    async function fetchProducts(sheetId, apiKey) {
+    };
+
+    const fetchProducts = async (sheetId, apiKey) => {
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const courseShort = urlParams.get("course");
@@ -210,7 +214,7 @@
         const skladUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/SKLAD?key=${apiKey}`;
         const skladResp = await fetch(skladUrl);
         const skladData = await skladResp.json();
-        
+
         if (!skladData.values || skladData.values.length === 0) {
           productsDiv.innerHTML = "<p>Немає товарів у таблиці SKLAD.</p>";
           return;
@@ -222,49 +226,59 @@
           return;
         }
 
+        const listFragment = document.createDocumentFragment();
         const list = document.createElement("ul");
+
         products.forEach(row => {
           const li = document.createElement("li");
           li.dataset.productId = row[0];
           li.dataset.productName = row[2];
-          li.dataset.stock = row[3]; // зберігаємо кількість на складі
+          li.dataset.stock = row[3];
 
           const rowContainer = document.createElement("div");
           rowContainer.className = "row-container";
 
           const productInfo = document.createElement("div");
-          productInfo.innerHTML = `🆔<strong>${row[0]}</strong> <strong>${row[2]}</strong> <br><strong>Ціна: ${row[4]} грн</strong> <br><strong>На складі: ${row[3]} шт.</strong>`;
+          productInfo.innerHTML = `🆔<strong>${row[0]}</strong> <strong>${row[2]}</strong> <br>
+            <strong>Ціна: ${row[4]} грн</strong> <br>
+            <strong>На складі: ${row[3]} шт.</strong>`;
 
           const qtyContainer = document.createElement("div");
           qtyContainer.className = "quantity-container";
 
-          const minusButton = document.createElement("button");
-          minusButton.textContent = "–";
+          const updateQuantity = (delta, input) => {
+            const current = parseInt(input.value, 10) || 0;
+            input.value = Math.max(0, current + delta);
+          };
 
           const quantityInput = document.createElement("input");
           quantityInput.type = "number";
           quantityInput.value = "0";
           quantityInput.min = "0";
 
+          const minusButton = document.createElement("button");
+          minusButton.textContent = "–";
+          minusButton.onclick = () => updateQuantity(-1, quantityInput);
+
           const plusButton = document.createElement("button");
           plusButton.textContent = "+";
-
-          minusButton.onclick = () => quantityInput.value = Math.max(0, quantityInput.value - 1);
-          plusButton.onclick = () => quantityInput.value = Number(quantityInput.value) + 1;
+          plusButton.onclick = () => updateQuantity(1, quantityInput);
 
           qtyContainer.append(minusButton, quantityInput, plusButton);
           rowContainer.append(productInfo, qtyContainer);
           li.append(rowContainer);
-          list.append(li);
+          list.appendChild(li);
         });
 
+        listFragment.appendChild(list);
         productsDiv.innerHTML = "";
-        productsDiv.appendChild(list);
+        productsDiv.appendChild(listFragment);
         syncQuantities();
+        updateCartCount();
       } catch (error) {
         console.error("Помилка отримання даних:", error);
       }
-    }
+    };
 
     loadConfig();
   </script>
