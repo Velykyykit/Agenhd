@@ -109,24 +109,35 @@
       });
     }
 
-    function updateCartFromInputs() {
+    function addAllToCart() {
       let cart = getCart();
+      let messages = [];
+
       document.querySelectorAll("li").forEach(li => {
         let productId = li.dataset.productId;
+        let productName = li.dataset.productName;
+        let availableStock = parseInt(li.dataset.stock);
         let quantity = parseInt(li.querySelector("input").value) || 0;
         let index = cart.findIndex(item => item.id === productId);
 
         if (quantity > 0) {
-          if (index !== -1) {
-            cart[index].quantity = quantity;
+          if (quantity > availableStock) {
+            messages.push(`❌ ${productName}: недостатньо товару на складі!`);
           } else {
-            cart.push({ id: productId, name: li.dataset.productName, quantity });
+            if (index !== -1) {
+              cart[index].quantity = quantity;
+            } else {
+              cart.push({ id: productId, name: productName, quantity });
+            }
           }
         } else if (index !== -1) {
           cart.splice(index, 1);
         }
       });
+
       saveCart(cart);
+      syncQuantities();
+      alert(messages.length ? messages.join("\n") : "🛒 Корзина оновлена!");
     }
 
     async function loadConfig() {
