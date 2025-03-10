@@ -1,4 +1,124 @@
-<script>
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Товари</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: #ffffff;
+      color: #000;
+    }
+    .container {
+      padding: 20px;
+      max-width: 700px;
+      margin: 0 auto;
+      text-align: left;
+    }
+    .back-link {
+      text-decoration: none;
+      color: #007bff;
+      font-size: 18px;
+      display: inline-block;
+      margin-bottom: 15px;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+    .button {
+      display: block;
+      margin: 10px auto;
+      padding: 10px 20px;
+      background: linear-gradient(to bottom, #9b59b6, #8e44ad);
+      border-radius: 20px;
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    .button:hover {
+      background-color: rgba(255,255,255,0.2);
+      transform: scale(1.05);
+    }
+    .product-list {
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    li {
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #ccc;
+    }
+    .row-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .quantity-container {
+      display: inline-flex;
+      align-items: center;
+      background: linear-gradient(to bottom, #9b59b6, #8e44ad);
+      border-radius: 20px;
+      padding: 2px 6px;
+      box-shadow: inset 0 0 1px #fff, 0 2px 3px rgba(0,0,0,0.2);
+    }
+    .quantity-container button {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 18px;
+      width: 30px;
+      height: 30px;
+      line-height: 30px;
+      text-align: center;
+      cursor: pointer;
+      border-radius: 50%;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    .quantity-container button:hover {
+      background-color: rgba(255,255,255,0.2);
+      transform: scale(1.1);
+    }
+    .quantity-container input {
+      width: 40px;
+      text-align: center;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      margin: 0 5px;
+      background: #fff;
+      color: #000;
+    }
+    .quantity-container input:focus {
+      outline: 2px solid #ddd;
+    }
+    .footer-text {
+      text-align: center;
+      font-size: 14px;
+      color: #666;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="order.html" class="back-link">🔙 Назад до курсів</a>
+    <button class="button" onclick="openCart()">🛒 Корзина</button>
+    <div id="products" class="product-list">Завантаження...</div>
+    <button class="button add-all-to-cart" onclick="addAllToCart()">🛒 Додати у корзину</button>
+    <p class="footer-text">Для зміни кількості товару у корзині натисніть кнопку Додати у корзину</p>
+  </div>
+  <script>
     // Функція для отримання корзини з localStorage
     function getCart() {
       return JSON.parse(localStorage.getItem("cart")) || [];
@@ -20,22 +140,18 @@
       });
     }
 
-    // Функція для додавання всіх товарів до корзини з перевіркою наявності
+    // Функція для додавання всіх товарів до корзини
     function addAllToCart() {
       const cart = getCart();
       const items = document.querySelectorAll("li");
-      let notAvailable = [];
 
       items.forEach(li => {
         const productId = li.dataset.productId;
         const productName = li.dataset.productName;
-        const stock = parseInt(li.dataset.productStock) || 0; // Додаємо збереження кількості товарів
         const quantity = parseInt(li.querySelector("input").value) || 0;
         const index = cart.findIndex(item => item.id === productId);
 
-        if (quantity > stock) {
-          notAvailable.push(`${productName} (На складі: ${stock}, Ви обрали: ${quantity})`);
-        } else if (quantity > 0) {
+        if (quantity > 0) {
           if (index !== -1) {
             cart[index].quantity = quantity;
           } else {
@@ -47,12 +163,7 @@
       });
 
       saveCart(cart);
-
-      if (notAvailable.length > 0) {
-        alert("⚠️ Не достатньо товару на складі:\n" + notAvailable.join("\n"));
-      } else {
-        alert("🛒 Товари успішно додані у корзину!");
-      }
+      alert("🛒 Корзина оновлена!");
     }
 
     // Функція для переходу на сторінку корзини
@@ -98,20 +209,17 @@
           return;
         }
 
-        const list = document.createElement("ul");
+        const fragment = document.createDocumentFragment();
         products.forEach(row => {
           const li = document.createElement("li");
           li.dataset.productId = row[0];
           li.dataset.productName = row[2];
-          li.dataset.productStock = row[3]; // Додаємо кількість товару на складі
 
           const rowContainer = document.createElement("div");
           rowContainer.className = "row-container";
 
           const productInfo = document.createElement("div");
-          productInfo.innerHTML = `🆔<strong>${row[0]}. - <strong>${row[2]}</strong> 
-          <br><strong>Ціна:</strong> ${row[4]} грн
-          <br><strong>На складі:</strong> ${row[3]} шт.`;
+          productInfo.innerHTML = `🆔<strong>${row[0]}. - <strong>${row[2]}  <br>Ціна:<strong> ${row[4]} грн. <br>На складі:<strong> ${row[3]} шт.`;
 
           const qtyContainer = document.createElement("div");
           qtyContainer.className = "quantity-container";
@@ -138,15 +246,18 @@
           qtyContainer.append(minusButton, quantityInput, plusButton);
           rowContainer.append(productInfo, qtyContainer);
           li.append(rowContainer);
-          list.appendChild(li);
+          fragment.appendChild(li);
         });
 
         productsDiv.innerHTML = "";
-        productsDiv.appendChild(list);
+        productsDiv.appendChild(fragment);
+        syncQuantities();
       } catch (error) {
         console.error("Помилка отримання даних:", error);
       }
     }
 
     loadConfig();
-</script>
+  </script>
+</body>
+</html>
