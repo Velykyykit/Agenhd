@@ -157,7 +157,7 @@
         let quantity = parseInt(li.querySelector("input").value) || 0;
         if (quantity > 0) {
           if (quantity > availableStock) {
-            messages += `Товар "${productName}" не може бути доданий. Доступно ${availableStock} шт.\n`;
+            messages += `"${productName}" не доданий. Доступно ${availableStock} шт.\n`;
           } else {
             let index = cart.findIndex(item => item.id === productId);
             if (index !== -1) {
