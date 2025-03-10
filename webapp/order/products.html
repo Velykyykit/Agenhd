@@ -17,8 +17,9 @@
       margin: 0 auto;
       text-align: left;
     }
-    .cart-button, .add-all-to-cart, .quantity-button {
-      display: inline-block;
+    .cart-button, .add-all-to-cart {
+      display: block;
+      margin: 10px auto 20px auto;
       background: linear-gradient(to bottom, #9b59b6, #8e44ad);
       border-radius: 20px;
       border: none;
@@ -28,9 +29,8 @@
       cursor: pointer;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
       transition: background-color 0.3s, transform 0.2s;
-      text-align: center;
     }
-    .cart-button:hover, .add-all-to-cart:hover, .quantity-button:hover {
+    .cart-button:hover, .add-all-to-cart:hover {
       background-color: rgba(255,255,255,0.2);
       transform: scale(1.05);
     }
@@ -50,10 +50,25 @@
       align-items: center;
       gap: 5px;
     }
+    .quantity-container button {
+      background: linear-gradient(to bottom, #9b59b6, #8e44ad);
+      border: none;
+      border-radius: 50%;
+      color: #fff;
+      font-size: 14px;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    .quantity-container button:hover {
+      background-color: rgba(255,255,255,0.2);
+      transform: scale(1.1);
+    }
     .quantity-container input {
-      width: 40px;
+      width: 35px;
       text-align: center;
-      font-size: 16px;
+      font-size: 14px;
       border: none;
       border-radius: 4px;
       background: #fff;
@@ -92,41 +107,6 @@
           li.querySelector("input").value = cartItem.quantity;
         }
       });
-    }
-
-    function addAllToCart() {
-      let cart = getCart();
-      let messages = [];
-
-      document.querySelectorAll("li").forEach(li => {
-        let productId = li.dataset.productId;
-        let productName = li.dataset.productName;
-        let availableStock = parseInt(li.dataset.stock);
-        let quantity = parseInt(li.querySelector("input").value) || 0;
-        let index = cart.findIndex(item => item.id === productId);
-
-        if (quantity > 0) {
-          if (quantity > availableStock) {
-            messages.push(`❌ ${productName}: недостатньо товару на складі!`);
-          } else {
-            if (index !== -1) {
-              cart[index].quantity = quantity;
-            } else {
-              cart.push({ id: productId, name: productName, quantity });
-            }
-          }
-        } else if (index !== -1) {
-          cart.splice(index, 1);
-        }
-      });
-
-      saveCart(cart);
-      syncQuantities();
-      alert(messages.length ? messages.join("\n") : "🛒 Корзина оновлена!");
-    }
-
-    function openCart() {
-      window.location.href = "cart.html";
     }
 
     async function loadConfig() {
@@ -170,14 +150,13 @@
           li.dataset.productId = row[0];
           li.dataset.productName = row[2];
           li.dataset.stock = row[3];
-
           li.innerHTML = `
             <div class="row-container">
               <div>🆔<strong>${row[0]} ${row[2]}</strong> <br>Ціна: ${row[4]} грн <br>На складі: ${row[3]} шт.</div>
               <div class="quantity-container">
-                <button class="quantity-button" onclick="this.nextElementSibling.stepDown()">–</button>
+                <button onclick="this.nextElementSibling.stepDown()">–</button>
                 <input type="number" value="0" min="0">
-                <button class="quantity-button" onclick="this.previousElementSibling.stepUp()">+</button>
+                <button onclick="this.previousElementSibling.stepUp()">+</button>
               </div>
             </div>`;
           list.appendChild(li);
