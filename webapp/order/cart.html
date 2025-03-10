@@ -131,32 +131,22 @@
   </div>
 
   <script>
-    // Симульовані дані з таблиці SHEET_SKLAD
-    const stockData = {
-      "p1": { id: "p1", name: "Product 1", totalQuantity: 100, reserv: 20 },
-      "p2": { id: "p2", name: "Product 2", totalQuantity: 50, reserv: 10 }
-      // Додайте інші товари за потребою
-    };
-
+    // Функції для роботи з корзиною (localStorage)
     function getCart() {
       return JSON.parse(localStorage.getItem("cart")) || [];
     }
-
     function saveCart(cart) {
       localStorage.setItem("cart", JSON.stringify(cart));
     }
-
     function loadCart() {
       const cart = getCart();
       const cartContainer = document.getElementById("cart-items");
       cartContainer.innerHTML = "";
-
       if (cart.length === 0) {
         cartContainer.innerHTML = "<p class='empty-cart'>Корзина порожня 😞</p>";
         return;
       }
-
-      cart.forEach((item) => {
+      cart.forEach(item => {
         const div = document.createElement("div");
         div.className = "cart-item";
         div.innerHTML = `
@@ -171,11 +161,9 @@
         cartContainer.appendChild(div);
       });
     }
-
     function updateQuantity(productId, change, setValue = null) {
       let cart = getCart();
       let item = cart.find(i => i.id === productId);
-
       if (item) {
         if (setValue !== null) {
           item.quantity = parseInt(setValue) || 1;
@@ -183,12 +171,10 @@
           item.quantity = Math.max(1, item.quantity + change);
         }
       }
-
       saveCart(cart);
       loadCart();
       syncWithProducts();
     }
-
     function removeFromCart(productId) {
       let cart = getCart();
       cart = cart.filter(item => item.id !== productId);
@@ -196,99 +182,87 @@
       loadCart();
       syncWithProducts();
     }
-
     function syncWithProducts() {
       if (window.opener && !window.opener.closed) {
         window.opener.postMessage({ type: "syncCart", cart: getCart() }, "*");
       }
     }
-
-    // Симульована асинхронна функція для отримання даних товару з SHEET_SKLAD
-    function getStockItem(productId) {
-      return new Promise((resolve, reject) => {
-        setTimeout(() => {
-          if (stockData[productId]) {
-            resolve(stockData[productId]);
-          } else {
-            reject("Товар не знайдено.");
-          }
-        }, 100);
-      });
+    function goBack() {
+      window.location.href = "order.html";
     }
 
-    // Симульована асинхронна функція для оновлення резерву товару в SHEET_SKLAD
-    function reserveStock(productId, newReserv) {
-      return new Promise((resolve, reject) => {
-        setTimeout(() => {
-          if (stockData[productId]) {
-            stockData[productId].reserv = newReserv;
-            resolve();
-          } else {
-            reject("Товар не знайдено.");
-          }
-        }, 100);
-      });
-    }
-
+    // Функція оформлення замовлення з перевіркою наявності на складі
     async function checkout() {
       const cart = getCart();
-
       if (cart.length === 0) {
         alert("❌ Корзина порожня! Додайте товари перед оформленням замовлення.");
         return;
       }
-
+      // Завантаження конфігурації (SHEET_SKLAD та GOOGLE_API_KEY повинні бути визначені у config.js)
+      const SHEET_SKLAD = window.CONFIG.SHEET_SKLAD;
+      const GOOGLE_API_KEY = window.CONFIG.GOOGLE_API_KEY;
+      const skladUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_SKLAD}/values/SKLAD?key=${GOOGLE_API_KEY}`;
+      let skladData;
+      try {
+        const response = await fetch(skladUrl);
+        if (!response.ok) throw new Error("Не вдалося отримати дані з таблиці SKLAD");
+        skladData = await response.json();
+      } catch (error) {
+        alert("Помилка завантаження даних зі складу: " + error);
+        return;
+      }
+      // Припускаємо, що перший рядок – заголовки, решта – дані
+      const rows = skladData.values.slice(1);
       let errorMessages = [];
-
-      // Перевірка наявності кожного товару
+      // Перевірка кожного товару з корзини
       for (const item of cart) {
-        try {
-          const stockItem = await getStockItem(item.id);
-          const availableUnits = stockItem.totalQuantity - stockItem.reserv;
-          if (item.quantity > availableUnits) {
-            errorMessages.push(`Товар "${item.name}" має недостатньо одиниць. Доступно: ${availableUnits}.`);
-          }
-        } catch (error) {
-          errorMessages.push(`Помилка при перевірці товару "${item.name}": ${error}`);
+        // Знаходимо рядок за product id (припускаємо, що id знаходиться у колонці 0)
+        const row = rows.find(r => r[0] === item.id);
+        if (!row) {
+          errorMessages.push(`Товар "${item.name}" не знайдено на складі.`);
+          continue;
+        }
+        // Загальна кількість – стовпець 3, резерв (reserv) – стовпець 10 (індекс 9)
+        const totalQuantity = parseInt(row[3]) || 0;
+        const reserved = parseInt(row[9]) || 0;
+        const availableUnits = totalQuantity - reserved;
+        if (item.quantity > availableUnits) {
+          errorMessages.push(`Товар "${item.name}" має недостатньо одиниць. Доступно: ${availableUnits}.`);
         }
       }
-
       if (errorMessages.length > 0) {
         alert(errorMessages.join("\n"));
         return;
       }
-
-      // Резервування товарів (оновлення колонки "reserv")
+      // Функція для оновлення резерву – у реальному рішенні слід викликати серверний endpoint
+      async function updateReserv(productId, newReserv) {
+        // Реалізація оновлення даних у Google Sheets через сервер – наразі симуляція
+        return Promise.resolve();
+      }
+      // Резервування товарів: для кожного товару оновлюємо резерв, додаючи кількість з корзини
       for (const item of cart) {
+        const row = rows.find(r => r[0] === item.id);
+        const reserved = parseInt(row[9]) || 0;
+        const newReserv = reserved + item.quantity;
         try {
-          const stockItem = await getStockItem(item.id);
-          const newReserv = stockItem.reserv + item.quantity;
-          await reserveStock(item.id, newReserv);
+          await updateReserv(item.id, newReserv);
         } catch (error) {
           alert(`Помилка при резервуванні товару "${item.name}": ${error}`);
           return;
         }
       }
-
-      // Отримання id користувача (припускаємо, що він зберігається у localStorage)
-      const userId = localStorage.getItem("userId") || "guest";
-
-      // Підготовка даних для передачі: id товару та його кількість з корзини
+      // Отримання id користувача (ключ "user_id" збережено в localStorage)
+      const userId = localStorage.getItem("user_id") || "guest";
+      // Підготовка даних для передачі (id товару та кількість)
       const cartData = cart.map(item => ({ id: item.id, quantity: item.quantity }));
-
-      // Очистка корзини після резервування
+      // Очищення корзини після резервування
       localStorage.removeItem("cart");
       syncWithProducts();
-
-      // Перехід на сторінку fin.html з передачею параметрів: id користувача та даних корзини
+      // Перехід на сторінку fin.html з передачею параметрів
       const params = new URLSearchParams();
-      params.set("userId", userId);
+      params.set("user_id", userId);
       params.set("cart", JSON.stringify(cartData));
       window.location.href = "fin.html?" + params.toString();
-    }
-
-    function goBack() {
-      window.location.href = "order.html";
     }
 
     window.addEventListener("message", (event) => {
@@ -297,8 +271,8 @@
         loadCart();
       }
     });
-
     loadCart();
   </script>
+  <script src="../../config.js"></script>
 </body>
 </html>
