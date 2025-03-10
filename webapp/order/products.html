@@ -119,153 +119,108 @@
     <p class="footer-text">Для зміни кількості товару у корзині натисніть кнопку Додати у корзину</p>
   </div>
   <script>
-    // Функція для отримання корзини з localStorage
     function getCart() {
-      return JSON.parse(localStorage.getItem("cart")) || [];
+        return JSON.parse(localStorage.getItem("cart")) || [];
     }
 
-    // Функція для збереження корзини в localStorage
     function saveCart(cart) {
-      localStorage.setItem("cart", JSON.stringify(cart));
+        localStorage.setItem("cart", JSON.stringify(cart));
     }
 
-    // Функція для синхронізації кількості товарів з корзиною
-    function syncQuantities() {
-      const cart = getCart();
-      document.querySelectorAll("li").forEach(li => {
-        const cartItem = cart.find(item => item.id === li.dataset.productId);
-        if (cartItem) {
-          li.querySelector("input").value = cartItem.quantity;
-        }
-      });
-    }
-
-    // Функція для додавання всіх товарів до корзини з перевіркою наявності
-    function addAllToCart() {
-      const cart = getCart();
-      const items = document.querySelectorAll("li");
-      let notAvailable = [];
-
-      items.forEach(li => {
-        const productId = li.dataset.productId;
-        const productName = li.dataset.productName;
-        const stock = parseInt(li.dataset.productStock) || 0; // Додаємо збереження кількості товарів
-        const quantity = parseInt(li.querySelector("input").value) || 0;
-        const index = cart.findIndex(item => item.id === productId);
-
-        if (quantity > stock) {
-          notAvailable.push(`${productName} (На складі: ${stock}, Ви обрали: ${quantity})`);
-        } else if (quantity > 0) {
-          if (index !== -1) {
-            cart[index].quantity = quantity;
-          } else {
-            cart.push({ id: productId, name: productName, quantity });
-          }
-        } else if (index !== -1) {
-          cart.splice(index, 1);
-        }
-      });
-
-      saveCart(cart);
-
-      if (notAvailable.length > 0) {
-        alert("⚠️ Не достатньо товару на складі:\n" + notAvailable.join("\n"));
-      } else {
-        alert("🛒 Товари успішно додані у корзину!");
-      }
-    }
-
-    // Функція для переходу на сторінку корзини
     function openCart() {
-      window.location.href = "cart.html";
+        window.location.href = "cart.html";
     }
 
-    // Функція для завантаження конфігурації
     async function loadConfig() {
-      try {
-        const response = await fetch("../../config.js");
-        const script = document.createElement("script");
-        script.src = "../../config.js";
-        document.head.appendChild(script);
-        await new Promise(resolve => script.onload = resolve);
-        const { SHEET_SKLAD, GOOGLE_API_KEY } = window.CONFIG;
-        fetchProducts(SHEET_SKLAD, GOOGLE_API_KEY);
-      } catch (error) {
-        console.error("Помилка завантаження конфігурації:", error);
-      }
+        try {
+            const response = await fetch("../../config.js");
+            const script = document.createElement("script");
+            script.src = "../../config.js";
+            document.head.appendChild(script);
+            await new Promise(resolve => script.onload = resolve);
+            const { SHEET_SKLAD, GOOGLE_API_KEY } = window.CONFIG;
+            fetchProducts(SHEET_SKLAD, GOOGLE_API_KEY);
+        } catch (error) {
+            console.error("Помилка завантаження конфігурації:", error);
+        }
     }
 
-    // Функція для завантаження товарів
     async function fetchProducts(sheetId, apiKey) {
-      try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const courseShort = urlParams.get("course");
-        const productsDiv = document.getElementById("products");
-        productsDiv.innerHTML = "<p>Завантаження...</p>";
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const courseShort = urlParams.get("course");
+            const productsDiv = document.getElementById("products");
+            productsDiv.innerHTML = "<p>Завантаження...</p>";
 
-        const skladUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/SKLAD?key=${apiKey}`;
-        const skladResp = await fetch(skladUrl);
-        const skladData = await skladResp.json();
+            const skladUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/SKLAD?key=${apiKey}`;
+            const skladResp = await fetch(skladUrl);
+            const skladData = await skladResp.json();
 
-        if (!skladData.values || skladData.values.length === 0) {
-          productsDiv.innerHTML = "<p>Немає товарів у таблиці SKLAD.</p>";
-          return;
+            if (!skladData.values || skladData.values.length === 0) {
+                productsDiv.innerHTML = "<p>Немає товарів у таблиці SKLAD.</p>";
+                return;
+            }
+
+            const list = document.createElement("ul");
+            skladData.values.slice(1).forEach(row => {
+                const productId = row[0];
+                const productName = row[2];
+                const stock = row[3];
+                const price = row[4];
+                const googleDriveUrl = row[8] || ""; 
+
+                const imageUrl = convertGoogleDriveLink(googleDriveUrl); 
+
+                const li = document.createElement("li");
+                li.dataset.productId = productId;
+                li.dataset.productName = productName;
+                li.dataset.productStock = stock;
+
+                li.innerHTML = `
+                    <div class="row-container">
+                        <div>
+                            🆔 <strong>${productId}</strong> - 
+                            <a href="#" onclick="showProductImage(event, '${imageUrl}')" style="text-decoration: none; color: #007bff;">
+                                ${productName}
+                            </a>
+                            <br><strong>Ціна:</strong> ${price} грн
+                            <br><strong>На складі:</strong> ${stock} шт.
+                        </div>
+                    </div>`;
+
+                list.appendChild(li);
+            });
+
+            productsDiv.innerHTML = "";
+            productsDiv.appendChild(list);
+        } catch (error) {
+            console.error("Помилка отримання даних:", error);
+        }
+    }
+
+    function convertGoogleDriveLink(url) {
+        if (!url.includes("drive.google.com")) return url; 
+        const fileIdMatch = url.match(/[-\w]{25,}/);
+        return fileIdMatch ? `https://drive.google.com/uc?export=view&id=${fileIdMatch[0]}` : "";
+    }
+
+    function showProductImage(event, imageUrl) {
+        event.preventDefault();
+
+        const popup = document.getElementById("imagePopup");
+        const content = document.getElementById("popupContent");
+
+        if (imageUrl) {
+            content.innerHTML = `<img src="${imageUrl}" alt="Фото товару">`;
+        } else {
+            content.innerHTML = `<p style="font-size: 50px;">📦</p>`;
         }
 
-        const products = skladData.values.slice(1).filter(row => row[1] === courseShort);
-        if (products.length === 0) {
-          productsDiv.innerHTML = "<p>Немає товарів для цього курсу.</p>";
-          return;
-        }
+        popup.style.display = "block";
+    }
 
-        const list = document.createElement("ul");
-        products.forEach(row => {
-          const li = document.createElement("li");
-          li.dataset.productId = row[0];
-          li.dataset.productName = row[2];
-          li.dataset.productStock = row[3]; // Додаємо кількість товару на складі
-
-          const rowContainer = document.createElement("div");
-          rowContainer.className = "row-container";
-
-          const productInfo = document.createElement("div");
-          productInfo.innerHTML = `🆔<strong>${row[0]}. - <strong>${row[2]}</strong> 
-          <br><strong>Ціна:</strong> ${row[4]} грн
-          <br><strong>На складі:</strong> ${row[3]} шт.`;
-
-          const qtyContainer = document.createElement("div");
-          qtyContainer.className = "quantity-container";
-
-          const minusButton = document.createElement("button");
-          minusButton.textContent = "–";
-          minusButton.onclick = () => {
-            const input = qtyContainer.querySelector("input");
-            input.value = Math.max(0, input.value - 1);
-          };
-
-          const quantityInput = document.createElement("input");
-          quantityInput.type = "number";
-          quantityInput.value = "0";
-          quantityInput.min = "0";
-
-          const plusButton = document.createElement("button");
-          plusButton.textContent = "+";
-          plusButton.onclick = () => {
-            const input = qtyContainer.querySelector("input");
-            input.value = Number(input.value) + 1;
-          };
-
-          qtyContainer.append(minusButton, quantityInput, plusButton);
-          rowContainer.append(productInfo, qtyContainer);
-          li.append(rowContainer);
-          list.appendChild(li);
-        });
-
-        productsDiv.innerHTML = "";
-        productsDiv.appendChild(list);
-      } catch (error) {
-        console.error("Помилка отримання даних:", error);
-      }
+    function closePopup() {
+        document.getElementById("imagePopup").style.display = "none";
     }
 
     loadConfig();
