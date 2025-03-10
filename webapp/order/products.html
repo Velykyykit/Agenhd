@@ -64,49 +64,32 @@
       justify-content: space-between;
       align-items: center;
     }
-    .quantity-container {
-      display: inline-flex;
-      align-items: center;
-      background: linear-gradient(to bottom, #9b59b6, #8e44ad);
-      border-radius: 20px;
-      padding: 2px 6px;
-      box-shadow: inset 0 0 1px #fff, 0 2px 3px rgba(0,0,0,0.2);
-    }
-    .quantity-container button {
-      background: transparent;
-      border: none;
-      color: #fff;
-      font-size: 18px;
-      width: 30px;
-      height: 30px;
-      line-height: 30px;
-      text-align: center;
-      cursor: pointer;
-      border-radius: 50%;
-      transition: background-color 0.3s, transform 0.2s;
-    }
-    .quantity-container button:hover {
-      background-color: rgba(255,255,255,0.2);
-      transform: scale(1.1);
-    }
-    .quantity-container input {
-      width: 40px;
-      text-align: center;
-      font-size: 16px;
-      border: none;
-      border-radius: 4px;
-      margin: 0 5px;
+    .popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       background: #fff;
-      color: #000;
-    }
-    .quantity-container input:focus {
-      outline: 2px solid #ddd;
-    }
-    .footer-text {
+      padding: 20px;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+      border-radius: 10px;
       text-align: center;
-      font-size: 14px;
-      color: #666;
-      margin-top: 20px;
+      z-index: 1000;
+      display: none;
+    }
+    .popup img {
+      max-width: 300px;
+      max-height: 300px;
+      border-radius: 8px;
+    }
+    .popup button {
+      margin-top: 10px;
+      padding: 8px 16px;
+      background: #9b59b6;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -118,84 +101,91 @@
     <button class="button add-all-to-cart" onclick="addAllToCart()">🛒 Додати у корзину</button>
     <p class="footer-text">Для зміни кількості товару у корзині натисніть кнопку Додати у корзину</p>
   </div>
+
+  <!-- Вікно для зображення -->
+  <div id="imagePopup" class="popup">
+    <span id="popupContent"></span><br>
+    <button onclick="closePopup()">Закрити</button>
+  </div>
+
   <script>
     function getCart() {
-        return JSON.parse(localStorage.getItem("cart")) || [];
+      return JSON.parse(localStorage.getItem("cart")) || [];
     }
 
     function saveCart(cart) {
-        localStorage.setItem("cart", JSON.stringify(cart));
+      localStorage.setItem("cart", JSON.stringify(cart));
     }
 
     function openCart() {
-        window.location.href = "cart.html";
+      window.location.href = "cart.html";
     }
 
     async function loadConfig() {
-        try {
-            const response = await fetch("../../config.js");
-            const script = document.createElement("script");
-            script.src = "../../config.js";
-            document.head.appendChild(script);
-            await new Promise(resolve => script.onload = resolve);
-            const { SHEET_SKLAD, GOOGLE_API_KEY } = window.CONFIG;
-            fetchProducts(SHEET_SKLAD, GOOGLE_API_KEY);
-        } catch (error) {
-            console.error("Помилка завантаження конфігурації:", error);
-        }
+      try {
+        const response = await fetch("../../config.js");
+        const script = document.createElement("script");
+        script.src = "../../config.js";
+        document.head.appendChild(script);
+        await new Promise(resolve => script.onload = resolve);
+        const { SHEET_SKLAD, GOOGLE_API_KEY } = window.CONFIG;
+        fetchProducts(SHEET_SKLAD, GOOGLE_API_KEY);
+      } catch (error) {
+        console.error("Помилка завантаження конфігурації:", error);
+      }
     }
 
     async function fetchProducts(sheetId, apiKey) {
-        try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const courseShort = urlParams.get("course");
-            const productsDiv = document.getElementById("products");
-            productsDiv.innerHTML = "<p>Завантаження...</p>";
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const courseShort = urlParams.get("course");
+        const productsDiv = document.getElementById("products");
+        productsDiv.innerHTML = "<p>Завантаження...</p>";
 
-            const skladUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/SKLAD?key=${apiKey}`;
-            const skladResp = await fetch(skladUrl);
-            const skladData = await skladResp.json();
+        const skladUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/SKLAD?key=${apiKey}`;
+        const skladResp = await fetch(skladUrl);
+        const skladData = await skladResp.json();
 
-            if (!skladData.values || skladData.values.length === 0) {
-                productsDiv.innerHTML = "<p>Немає товарів у таблиці SKLAD.</p>";
-                return;
-            }
-
-            const list = document.createElement("ul");
-            skladData.values.slice(1).forEach(row => {
-                const productId = row[0];
-                const productName = row[2];
-                const stock = row[3];
-                const price = row[4];
-                const googleDriveUrl = row[8] || ""; 
-
-                const imageUrl = convertGoogleDriveLink(googleDriveUrl); 
-
-                const li = document.createElement("li");
-                li.dataset.productId = productId;
-                li.dataset.productName = productName;
-                li.dataset.productStock = stock;
-
-                li.innerHTML = `
-                    <div class="row-container">
-                        <div>
-                            🆔 <strong>${productId}</strong> - 
-                            <a href="#" onclick="showProductImage(event, '${imageUrl}')" style="text-decoration: none; color: #007bff;">
-                                ${productName}
-                            </a>
-                            <br><strong>Ціна:</strong> ${price} грн
-                            <br><strong>На складі:</strong> ${stock} шт.
-                        </div>
-                    </div>`;
-
-                list.appendChild(li);
-            });
-
-            productsDiv.innerHTML = "";
-            productsDiv.appendChild(list);
-        } catch (error) {
-            console.error("Помилка отримання даних:", error);
+        if (!skladData.values || skladData.values.length === 0) {
+          productsDiv.innerHTML = "<p>Немає товарів у таблиці SKLAD.</p>";
+          return;
         }
+
+        const list = document.createElement("ul");
+        skladData.values.slice(1).forEach(row => {
+          const productId = row[0];
+          const productName = row[2];
+          const stock = row[3];
+          const price = row[4];
+          const googleDriveUrl = row[8] || ""; 
+
+          const imageUrl = convertGoogleDriveLink(googleDriveUrl); 
+
+          const li = document.createElement("li");
+          li.dataset.productId = productId;
+          li.dataset.productName = productName;
+          li.dataset.productStock = stock;
+
+          li.innerHTML = `
+            <div class="row-container">
+              <div>
+                🆔 <strong>${productId}</strong> - 
+                <a href="#" onclick="showProductImage(event, '${imageUrl}')" style="text-decoration: none; color: #007bff;">
+                  ${productName}
+                </a>
+                <br><strong>Ціна:</strong> ${price} грн
+                <br><strong>На складі:</strong> ${stock} шт.
+              </div>
+            </div>`;
+
+          list.appendChild(li);
+        });
+
+        productsDiv.innerHTML = "";
+        productsDiv.appendChild(list);
+      } catch (error) {
+        console.error("Помилка отримання даних:", error);
+      }
     }
 
     function convertGoogleDriveLink(url) {
@@ -205,25 +195,19 @@
     }
 
     function showProductImage(event, imageUrl) {
-        event.preventDefault();
+      event.preventDefault();
+      const popup = document.getElementById("imagePopup");
+      const content = document.getElementById("popupContent");
 
-        const popup = document.getElementById("imagePopup");
-        const content = document.getElementById("popupContent");
-
-        if (imageUrl) {
-            content.innerHTML = `<img src="${imageUrl}" alt="Фото товару">`;
-        } else {
-            content.innerHTML = `<p style="font-size: 50px;">📦</p>`;
-        }
-
-        popup.style.display = "block";
+      content.innerHTML = imageUrl ? `<img src="${imageUrl}" alt="Фото товару">` : `<p style="font-size: 50px;">📦</p>`;
+      popup.style.display = "block";
     }
 
     function closePopup() {
-        document.getElementById("imagePopup").style.display = "none";
+      document.getElementById("imagePopup").style.display = "none";
     }
 
     loadConfig();
-</script>
+  </script>
 </body>
 </html>
