@@ -99,6 +99,16 @@
       document.getElementById("cart-count").textContent = totalItems;
     }
 
+    function syncQuantities() {
+      let cart = getCart();
+      document.querySelectorAll("li").forEach(li => {
+        let cartItem = cart.find(item => item.id === li.dataset.productId);
+        if (cartItem) {
+          li.querySelector("input").value = cartItem.quantity;
+        }
+      });
+    }
+
     async function fetchProducts(sheetId, apiKey) {
       try {
         const urlParams = new URLSearchParams(window.location.search);
@@ -131,9 +141,9 @@
             <div class="row-container">
               <div>🆔<strong>${row[0]} ${row[2]}</strong> <br>Ціна: ${row[4]} грн <br>На складі: ${row[3]} шт.</div>
               <div class="quantity-container">
-                <button onclick="this.nextElementSibling.stepDown(); updateCartFromInputs();">–</button>
-                <input type="number" value="0" min="0" onchange="updateCartFromInputs()">
-                <button onclick="this.previousElementSibling.stepUp(); updateCartFromInputs();">+</button>
+                <button onclick="this.nextElementSibling.stepDown(); syncQuantities();">–</button>
+                <input type="number" value="0" min="0" onchange="syncQuantities()">
+                <button onclick="this.previousElementSibling.stepUp(); syncQuantities();">+</button>
               </div>
             </div>`;
           list.appendChild(li);
@@ -141,6 +151,7 @@
 
         productsDiv.innerHTML = "";
         productsDiv.appendChild(list);
+        syncQuantities();
       } catch (error) {
         console.error("Помилка отримання даних:", error);
       }
