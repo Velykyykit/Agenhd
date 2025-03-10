@@ -119,22 +119,28 @@
       background-color: rgba(255,255,255,0.2);
       transform: scale(1.05);
     }
+    .info-text {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 16px;
+      color: #555;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <a href="order.html" class="back-link">🔙 Назад до курсів</a>
-    <!-- Оновлена кнопка "Корзина" з відображенням кількості товарів -->
     <button class="cart-button" onclick="openCart()">🛒 Корзина (<span id="cart-count">0</span>)</button>
     <div id="products" class="product-list">Завантаження...</div>
     <button class="add-all-to-cart" onclick="addAllToCart()">🛒 Додати у корзину</button>
+    <!-- Додано інформативний текст -->
+    <p class="info-text">Щоб додати товар в корзину, потрібно натиснути кнопку 🛒 Додати у корзину</p>
   </div>
   <script>
     const getCart = () => JSON.parse(localStorage.getItem("cart")) || [];
     
     const updateCartCount = () => {
       const cart = getCart();
-      // Підрахунок загальної кількості товарів
       const count = cart.reduce((acc, item) => acc + item.quantity, 0);
       document.getElementById("cart-count").textContent = count;
     };
@@ -167,7 +173,6 @@
         if (quantity > 0) {
           if (quantity > availableStock) {
             messages += `Товар "${productName}" не може бути доданий. Доступно ${availableStock} шт.\n`;
-            // Скидання значення інпуту до максимально доступного
             quantityInput.value = availableStock;
           } else {
             const index = cart.findIndex(item => item.id === productId);
